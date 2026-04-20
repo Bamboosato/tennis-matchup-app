@@ -1,5 +1,33 @@
 import { expect, test } from "@playwright/test";
 
+test("shows tooltip on hover for primary actions on desktop", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByTestId("generate-button").hover();
+  await expect(
+    page.getByRole("tooltip", { name: "入力した条件で組合せを作成または再作成します。" }),
+  ).toBeVisible();
+
+  await page.getByTestId("open-share-dialog-button").hover();
+  await expect(
+    page.getByRole("tooltip", { name: "アプリURLを共有、コピー、QRコード表示できます。" }),
+  ).toBeVisible();
+});
+
+test("opens share dialog and shows QR code", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByTestId("open-share-dialog-button").click();
+  await expect(page.getByTestId("app-share-dialog")).toBeVisible();
+  await expect(page.getByText("https://tennis-matchup-app.vercel.app/")).toBeVisible();
+  await expect(page.getByTestId("native-share-button")).toBeVisible();
+  await expect(page.getByTestId("copy-url-button")).toBeVisible();
+
+  await page.getByTestId("toggle-qr-button").click();
+  await expect(page.getByTestId("share-qr-panel")).toBeVisible();
+  await expect(page.getByTestId("share-qr-image")).toBeVisible();
+});
+
 test("generates a matchup and shows summary data", async ({ page }) => {
   await page.goto("/");
 

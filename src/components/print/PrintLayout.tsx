@@ -35,14 +35,14 @@ export function PrintLayout({ model }: PrintLayoutProps) {
 
               @top-right {
                 content: "${printHeaderMeta}";
-                color: #746552;
+                color: #5b4d3b;
                 font-size: 9pt;
                 font-weight: 600;
               }
 
               @bottom-right {
                 content: counter(page) " / " counter(pages);
-                color: #746552;
+                color: #5b4d3b;
                 font-size: 9pt;
                 font-weight: 600;
               }
@@ -52,14 +52,14 @@ export function PrintLayout({ model }: PrintLayoutProps) {
       </style>
 
       <header className="mb-3 border-b border-[var(--color-line)] pb-2 print:hidden">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]">
           Matchup Sheet
         </p>
         <div className="mt-1 flex items-end justify-between gap-4 print:gap-3">
           <h1 className="font-display text-2xl print:text-[22px]">
             {model.conditions.eventName || "テニス対戦組合せApp"}
           </h1>
-          <p className="text-sm font-medium text-[var(--color-muted)] print:text-[15px]">
+          <p className="text-base font-medium text-[var(--color-muted)] print:text-[15px]">
             実施回数 {model.conditions.roundCount} 回 / コート数 {model.conditions.courtCount} 面 / 参加人数{" "}
             {model.conditions.participants.length} 人
           </p>

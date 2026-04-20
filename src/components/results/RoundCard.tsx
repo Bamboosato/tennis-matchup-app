@@ -34,14 +34,14 @@ export function RoundCard({
           <p
             className={
               compact
-                ? "text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]"
-                : "text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]"
+                ? "text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]"
+                : "text-base font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]"
             }
           >
             Round {round.roundNumber}
           </p>
           {!compact && onCompletedChange ? (
-            <label className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white/80 px-3 py-1 text-xs font-medium text-[var(--color-muted)]">
+            <label className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white/80 px-3 py-1.5 text-sm font-medium text-[var(--color-muted)]">
               <input
                 data-testid={`round-complete-checkbox-${round.roundNumber}`}
                 type="checkbox"
@@ -57,7 +57,7 @@ export function RoundCard({
           {!compact && completed ? (
             <span
               data-testid={`round-complete-badge-${round.roundNumber}`}
-              className="rounded-full border border-[#bdd6c2] bg-[#eef7f0] px-3 py-1 text-xs font-semibold text-[#3b6f47]"
+              className="rounded-full border border-[#bdd6c2] bg-[#eef7f0] px-3 py-1.5 text-sm font-semibold text-[#315d3b]"
             >
               完了
             </span>
@@ -65,8 +65,8 @@ export function RoundCard({
           <p
             className={
               compact
-                ? "rounded-full bg-[var(--color-surface)] px-3 py-1 text-[11px] text-[var(--color-muted)]"
-                : "rounded-full bg-[var(--color-surface)] px-4 py-2 text-sm text-[var(--color-muted)]"
+                ? "rounded-full bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-muted)]"
+                : "rounded-full bg-[var(--color-surface)] px-4 py-2 text-base text-[var(--color-muted)]"
             }
           >
             出場 {round.activePlayerIds.length} 人

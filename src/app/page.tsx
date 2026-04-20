@@ -5,8 +5,10 @@ import { ConditionForm } from "@/components/conditions/ConditionForm";
 import { ResponsiveShell } from "@/components/layout/ResponsiveShell";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
+import { AppShareDialog } from "@/components/share/AppShareDialog";
 import { PlayerStatsTable } from "@/components/results/PlayerStatsTable";
 import { RoundCard } from "@/components/results/RoundCard";
+import { HoverTooltip } from "@/components/ui/HoverTooltip";
 import { useMatchupGeneration } from "@/hooks/useMatchupGeneration";
 import { usePrintPreview } from "@/hooks/usePrintPreview";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
@@ -41,6 +43,7 @@ export default function HomePage() {
   const [courtCount, setCourtCount] = useState(2);
   const [roundCount, setRoundCount] = useState(4);
   const [completedRounds, setCompletedRounds] = useState<number[]>([]);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const result = useMatchupStore((state) => state.result);
   const errorMessage = useMatchupStore((state) => state.errorMessage);
   const isGenerating = useMatchupStore((state) => state.isGenerating);
@@ -115,20 +118,23 @@ export default function HomePage() {
     <ResponsiveShell>
       <header className="mb-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="flex min-h-[110px] flex-col justify-center rounded-[2rem] border border-white/65 bg-[linear-gradient(135deg,rgba(244,112,66,0.22),rgba(255,255,255,0.94))] px-5 py-4 shadow-[0_22px_70px_rgba(53,40,19,0.12)] sm:min-h-[116px] sm:px-6 sm:py-4">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.24em] text-[var(--color-accent)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-ink)]">
             Tennis Matchup App
           </p>
-          <p className="mt-3 text-sm leading-6 text-[var(--color-muted)] sm:text-[15px]">
+          <p className="mt-3 text-base leading-7 text-[var(--color-muted)]">
             ダブルスの対戦表と休憩者をまとめて作成。
           </p>
         </section>
 
-        <InstallPromptBanner
-          canPromptInstall={canPromptInstall}
-          installHint={installHint}
-          isInstalled={isInstalled}
-          onPromptInstall={promptInstall}
-        />
+        <div className="grid gap-3">
+          <InstallPromptBanner
+            canPromptInstall={canPromptInstall}
+            installHint={installHint}
+            isInstalled={isInstalled}
+            onPromptInstall={promptInstall}
+            onOpenShareDialog={() => setShareDialogOpen(true)}
+          />
+        </div>
       </header>
 
       <main className="grid gap-6">
@@ -153,7 +159,7 @@ export default function HomePage() {
               className="grid gap-4 rounded-[1.8rem] border border-white/70 bg-white/92 p-5 shadow-[0_18px_50px_rgba(53,40,19,0.1)] backdrop-blur md:grid-cols-3"
             >
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+                <p className="text-base font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]">
                   Result
                 </p>
                 <p className="mt-2 text-2xl font-semibold">
@@ -161,13 +167,13 @@ export default function HomePage() {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-[var(--color-muted)]">採用シード</p>
+                <p className="text-base font-medium text-[var(--color-muted)]">採用シード</p>
                 <p data-testid="selected-seed" className="mt-2 text-xl font-semibold">
                   {currentSeed}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-[var(--color-muted)]">総合スコア</p>
+                <p className="text-base font-medium text-[var(--color-muted)]">総合スコア</p>
                 <p data-testid="total-score" className="mt-2 text-xl font-semibold">
                   {result.score.totalScore}
                 </p>
@@ -193,18 +199,21 @@ export default function HomePage() {
             />
 
             <StickyActionBar>
-              <button
-                data-testid="print-preview-button"
-                type="button"
-                onClick={() => openPrintPreview(result)}
-                className="rounded-full bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white"
-              >
-                印刷プレビューを開く
-              </button>
+              <HoverTooltip text="現在の組合せを印刷用の別画面で開きます。">
+                <button
+                  data-testid="print-preview-button"
+                  type="button"
+                  onClick={() => openPrintPreview(result)}
+                  className="rounded-full bg-[var(--color-accent)] px-6 py-3.5 text-base font-semibold text-white"
+                >
+                  印刷プレビューを開く
+                </button>
+              </HoverTooltip>
             </StickyActionBar>
           </>
         ) : null}
       </main>
+      <AppShareDialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} />
     </ResponsiveShell>
   );
 }

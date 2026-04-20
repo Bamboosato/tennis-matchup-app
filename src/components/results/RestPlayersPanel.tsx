@@ -26,8 +26,8 @@ export function RestPlayersPanel({
       <p
         className={
           compact
-            ? "text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a85b2f]"
-            : "text-sm font-semibold uppercase tracking-[0.18em] text-[#a85b2f]"
+            ? "text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8f522b]"
+            : "text-base font-semibold uppercase tracking-[0.14em] text-[#8f522b]"
         }
       >
         休憩者
@@ -39,8 +39,8 @@ export function RestPlayersPanel({
               key={player.id}
               className={
                 compact
-                  ? "rounded-full bg-white px-1.5 py-0.5 text-[16px] leading-none font-medium text-[var(--color-ink)]"
-                  : "rounded-full bg-white px-3 py-1 text-sm font-medium text-[var(--color-ink)]"
+                  ? "rounded-full bg-white px-1.5 py-0.5 text-[15px] leading-tight font-medium text-[var(--color-ink)]"
+                  : "rounded-full bg-white px-3 py-1.5 text-base font-medium text-[var(--color-ink)]"
               }
             >
               {player.name}
@@ -48,7 +48,7 @@ export function RestPlayersPanel({
           ))}
         </ul>
       ) : (
-        <p className={compact ? "mt-1.5 text-[11px] text-[var(--color-muted)]" : "mt-3 text-sm text-[var(--color-muted)]"}>
+        <p className={compact ? "mt-1.5 text-xs text-[var(--color-muted)]" : "mt-3 text-base text-[var(--color-muted)]"}>
           この回の休憩者はいません。
         </p>
       )}
