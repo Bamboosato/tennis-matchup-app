@@ -18,7 +18,7 @@ function getInstallHint() {
     (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
 
   return isAppleMobile
-    ? "iPhone / iPad では共有メニューから追加できます。"
+    ? "ホーム画面へのアイコン追加は共有メニューからできます。"
     : "対応ブラウザではメニューから追加できます。";
 }
 
