@@ -158,7 +158,7 @@ export function ConditionForm({
         </p>
       ) : null}
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <div className="mt-6 flex justify-center sm:justify-end">
         <HoverTooltip text="入力した条件で組合せを作成または再作成します。">
           <button
             data-testid="generate-button"
