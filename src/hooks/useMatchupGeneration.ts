@@ -6,10 +6,18 @@ import { generateMatchupUseCase } from "@/features/matchmaking/application/gener
 import type { MatchConditionInput } from "@/features/matchmaking/model/types";
 import { useMatchupStore } from "@/stores/matchupStore";
 
+const MIN_GENERATION_LOADING_MS = 1000;
+
 function zodMessage(error: ZodError): string {
   const firstIssue = error.issues[0];
 
   return firstIssue?.message ?? "入力内容を確認してください";
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 export function useMatchupGeneration() {
@@ -20,15 +28,28 @@ export function useMatchupGeneration() {
   const incrementRerollCount = useMatchupStore((state) => state.incrementRerollCount);
 
   const generate = useCallback(
-    (input: MatchConditionInput, seed: number) => {
+    async (input: MatchConditionInput, seed: number) => {
+      const startedAt = Date.now();
       setGenerating(true);
 
       try {
         const result = generateMatchupUseCase(input, seed);
+        const elapsed = Date.now() - startedAt;
+
+        if (elapsed < MIN_GENERATION_LOADING_MS) {
+          await wait(MIN_GENERATION_LOADING_MS - elapsed);
+        }
+
         setConditions(input);
         setResult(result, result.seed);
         return result;
       } catch (error) {
+        const elapsed = Date.now() - startedAt;
+
+        if (elapsed < MIN_GENERATION_LOADING_MS) {
+          await wait(MIN_GENERATION_LOADING_MS - elapsed);
+        }
+
         if (error instanceof ZodError) {
           setErrorMessage(zodMessage(error));
         } else if (error instanceof Error) {
@@ -46,7 +67,7 @@ export function useMatchupGeneration() {
   );
 
   const regenerate = useCallback(
-    (input: MatchConditionInput, seed: number) => {
+    async (input: MatchConditionInput, seed: number) => {
       incrementRerollCount();
       return generate(input, seed);
     },

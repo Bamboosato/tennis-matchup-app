@@ -165,7 +165,14 @@ export function ConditionForm({
           disabled={isGenerating}
           className="rounded-full bg-[var(--color-accent)] px-6 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isGenerating ? "作成中..." : "組合せ作成／再作成"}
+          {isGenerating ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/35 border-t-white" />
+              作成中...
+            </span>
+          ) : (
+            "組合せ作成／再作成"
+          )}
         </button>
       </div>
     </section>

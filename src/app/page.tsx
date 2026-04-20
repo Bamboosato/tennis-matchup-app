@@ -40,6 +40,7 @@ export default function HomePage() {
   const [participantCount, setParticipantCount] = useState(8);
   const [courtCount, setCourtCount] = useState(2);
   const [roundCount, setRoundCount] = useState(4);
+  const [completedRounds, setCompletedRounds] = useState<number[]>([]);
   const result = useMatchupStore((state) => state.result);
   const errorMessage = useMatchupStore((state) => state.errorMessage);
   const isGenerating = useMatchupStore((state) => state.isGenerating);
@@ -53,6 +54,10 @@ export default function HomePage() {
   useEffect(() => {
     setInstalled(isInstalled);
   }, [isInstalled, setInstalled]);
+
+  useEffect(() => {
+    setCompletedRounds([]);
+  }, [result?.generatedAt]);
 
   function handleParticipantCountChange(nextCount: number) {
     const safeCount = Number.isFinite(nextCount) ? Math.max(4, nextCount) : 4;
@@ -93,6 +98,16 @@ export default function HomePage() {
       }
 
       generate(currentInput(), nextSeed());
+    });
+  }
+
+  function toggleRoundCompletion(roundNumber: number, checked: boolean) {
+    setCompletedRounds((current) => {
+      if (checked) {
+        return current.includes(roundNumber) ? current : [...current, roundNumber];
+      }
+
+      return current.filter((value) => value !== roundNumber);
     });
   }
 
@@ -165,6 +180,8 @@ export default function HomePage() {
                   key={`round-${round.roundNumber}`}
                   round={round}
                   participants={result.conditions.participants}
+                  completed={completedRounds.includes(round.roundNumber)}
+                  onCompletedChange={(checked) => toggleRoundCompletion(round.roundNumber, checked)}
                 />
               ))}
             </section>

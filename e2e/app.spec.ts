@@ -9,6 +9,7 @@ test("generates a matchup and shows summary data", async ({ page }) => {
   await page.getByTestId("round-count-input").fill("5");
 
   await page.getByTestId("generate-button").click();
+  await expect(page.getByTestId("generate-button")).toContainText("作成中...");
 
   await expect(page.getByTestId("result-summary")).toBeVisible();
   await expect(page.getByTestId("selected-seed")).not.toBeEmpty();
@@ -31,4 +32,32 @@ test("re-tapping generate updates the selected seed", async ({ page }) => {
   await expect
     .poll(async () => page.getByTestId("selected-seed").textContent())
     .not.toBe(firstSeed);
+});
+
+test("completed round toggle can be switched and resets after regenerate", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByTestId("generate-button").click();
+  await expect(page.getByTestId("round-card-1")).toHaveAttribute("data-completed", "false");
+  await expect(page.getByTestId("round-complete-badge-1")).toHaveCount(0);
+
+  const roundOneCheckbox = page.getByTestId("round-complete-checkbox-1");
+  await roundOneCheckbox.check();
+  await expect(roundOneCheckbox).toBeChecked();
+  await expect(page.getByTestId("round-card-1")).toHaveAttribute("data-completed", "true");
+  await expect(page.getByTestId("round-complete-badge-1")).toBeVisible();
+
+  await roundOneCheckbox.uncheck();
+  await expect(roundOneCheckbox).not.toBeChecked();
+  await expect(page.getByTestId("round-card-1")).toHaveAttribute("data-completed", "false");
+  await expect(page.getByTestId("round-complete-badge-1")).toHaveCount(0);
+
+  await roundOneCheckbox.check();
+  await expect(roundOneCheckbox).toBeChecked();
+
+  await page.getByTestId("generate-button").click();
+  await expect(page.getByTestId("selected-seed")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toHaveAttribute("data-completed", "false");
+  await expect(page.getByTestId("round-complete-checkbox-1")).not.toBeChecked();
+  await expect(page.getByTestId("round-complete-badge-1")).toHaveCount(0);
 });
