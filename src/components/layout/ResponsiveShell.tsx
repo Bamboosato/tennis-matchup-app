@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import packageJson from "../../../package.json";
 
 type ResponsiveShellProps = {
   children: ReactNode;
@@ -11,6 +12,7 @@ export function ResponsiveShell({ children }: ResponsiveShellProps) {
         <div className="flex-1">{children}</div>
         <footer className="pt-8 pb-2 text-center text-xs text-[var(--color-muted)]">
           © 2026 Bamboosato
+          <span className="ml-2 inline-block">v{packageJson.version}</span>
         </footer>
       </div>
     </div>
