@@ -14,18 +14,18 @@ test("generates a matchup and shows summary data", async ({ page }) => {
   await expect(page.getByTestId("selected-seed")).not.toBeEmpty();
   await expect(page.getByTestId("round-card-1")).toBeVisible();
   await expect(page.getByTestId("round-card-5")).toBeVisible();
-  await expect(page.getByText("00")).toBeVisible();
-  await expect(page.getByText("04")).toBeVisible();
+  await expect(page.getByText("E2Eテスト会")).toBeVisible();
+  await expect(page.getByText("人ごとの集計")).toBeVisible();
 });
 
-test("regenerate updates the selected seed", async ({ page }) => {
+test("re-tapping generate updates the selected seed", async ({ page }) => {
   await page.goto("/");
 
   await page.getByTestId("generate-button").click();
   await expect(page.getByTestId("selected-seed")).toBeVisible();
   const firstSeed = await page.getByTestId("selected-seed").textContent();
 
-  await page.getByTestId("regenerate-button").click();
+  await page.getByTestId("generate-button").click();
   await expect(page.getByTestId("selected-seed")).toBeVisible();
 
   await expect

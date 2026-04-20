@@ -87,13 +87,12 @@ export default function HomePage() {
 
   function handleGenerate() {
     startTransition(() => {
-      generate(currentInput(), nextSeed());
-    });
-  }
+      if (result) {
+        regenerate(currentInput(), nextSeed() + 97);
+        return;
+      }
 
-  function handleRegenerate() {
-    startTransition(() => {
-      regenerate(currentInput(), nextSeed() + 97);
+      generate(currentInput(), nextSeed());
     });
   }
 
@@ -177,14 +176,6 @@ export default function HomePage() {
             />
 
             <StickyActionBar>
-              <button
-                data-testid="regenerate-button"
-                type="button"
-                onClick={handleRegenerate}
-                className="rounded-full border border-[var(--color-line)] bg-white px-5 py-3 text-sm font-semibold"
-              >
-                組合せをやり直す
-              </button>
               <button
                 data-testid="print-preview-button"
                 type="button"

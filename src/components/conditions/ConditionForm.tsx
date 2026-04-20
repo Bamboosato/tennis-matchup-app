@@ -165,7 +165,7 @@ export function ConditionForm({
           disabled={isGenerating}
           className="rounded-full bg-[var(--color-accent)] px-6 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isGenerating ? "作成中..." : "組合せを作成する"}
+          {isGenerating ? "作成中..." : "組合せ作成／再作成"}
         </button>
       </div>
     </section>
