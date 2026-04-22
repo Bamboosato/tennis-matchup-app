@@ -6,50 +6,78 @@ import { ResponsiveShell } from "@/components/layout/ResponsiveShell";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
 import { AppShareDialog } from "@/components/share/AppShareDialog";
+import { ResultShareDialog } from "@/components/share/ResultShareDialog";
 import { PlayerStatsTable } from "@/components/results/PlayerStatsTable";
 import { RoundCard } from "@/components/results/RoundCard";
 import { HoverTooltip } from "@/components/ui/HoverTooltip";
+import {
+  createAutoMatchConditionInput,
+  restoreSharedMatchupFromSearch,
+} from "@/features/matchmaking/application/shareMatchup";
 import { useMatchupGeneration } from "@/hooks/useMatchupGeneration";
 import { usePrintPreview } from "@/hooks/usePrintPreview";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
-import type { MatchConditionInput } from "@/features/matchmaking/model/types";
 import { useMatchupStore } from "@/stores/matchupStore";
 
-function formatParticipantLabel(index: number) {
-  return (index + 1).toString().padStart(2, "0");
-}
-
-function createInputModel(params: {
-  eventName: string;
-  participantCount: number;
-  courtCount: number;
-  roundCount: number;
-}): MatchConditionInput {
-  return {
-    eventName: params.eventName,
-    participantCount: params.participantCount,
-    courtCount: params.courtCount,
-    roundCount: params.roundCount,
-    participants: Array.from({ length: params.participantCount }, (_, index) => ({
-      id: `player-${formatParticipantLabel(index)}`,
-      name: formatParticipantLabel(index),
-    })),
-  };
-}
-
 export default function HomePage() {
-  const [eventName, setEventName] = useState("週末テニス会");
-  const [participantCount, setParticipantCount] = useState(8);
-  const [courtCount, setCourtCount] = useState(2);
-  const [roundCount, setRoundCount] = useState(4);
-  const [completedRounds, setCompletedRounds] = useState<number[]>([]);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [initialSharedLoad] = useState(() => {
+    if (typeof window === "undefined") {
+      return { restored: null, message: null as string | null, errorMessage: null as string | null };
+    }
+
+    try {
+      const restored = restoreSharedMatchupFromSearch(window.location.search);
+
+      if (!restored) {
+        return { restored: null, message: null, errorMessage: null };
+      }
+
+      return {
+        restored,
+        message: "共有された対戦表を表示中です。",
+        errorMessage: null,
+      };
+    } catch {
+      const params = new URLSearchParams(window.location.search);
+
+      if (params.get("shared") === "1") {
+        return {
+          restored: null,
+          message: "共有URLの内容が不正なため復元できませんでした。",
+          errorMessage: "共有URLを読み込めませんでした。",
+        };
+      }
+
+      return { restored: null, message: null, errorMessage: null };
+    }
+  });
+  const [eventName, setEventName] = useState(initialSharedLoad.restored?.input.eventName ?? "週末テニス会");
+  const [participantCount, setParticipantCount] = useState(
+    initialSharedLoad.restored?.input.participantCount ?? 8,
+  );
+  const [courtCount, setCourtCount] = useState(initialSharedLoad.restored?.input.courtCount ?? 2);
+  const [roundCount, setRoundCount] = useState(initialSharedLoad.restored?.input.roundCount ?? 4);
+  const [completedRoundsState, setCompletedRoundsState] = useState<{
+    generatedAt: string | null;
+    rounds: number[];
+  }>({
+    generatedAt: null,
+    rounds: [],
+  });
+  const [appShareDialogOpen, setAppShareDialogOpen] = useState(false);
+  const [resultShareDialogOpen, setResultShareDialogOpen] = useState(false);
+  const [sharedResultMessage, setSharedResultMessage] = useState<string | null>(
+    initialSharedLoad.message,
+  );
   const result = useMatchupStore((state) => state.result);
   const errorMessage = useMatchupStore((state) => state.errorMessage);
   const isGenerating = useMatchupStore((state) => state.isGenerating);
   const rerollCount = useMatchupStore((state) => state.rerollCount);
   const currentSeed = useMatchupStore((state) => state.currentSeed);
   const setInstalled = useMatchupStore((state) => state.setInstalled);
+  const setConditions = useMatchupStore((state) => state.setConditions);
+  const setResult = useMatchupStore((state) => state.setResult);
+  const setErrorMessage = useMatchupStore((state) => state.setErrorMessage);
   const { generate, regenerate } = useMatchupGeneration();
   const { openPrintPreview } = usePrintPreview();
   const { canPromptInstall, installHint, isInstalled, promptInstall } = usePwaInstallPrompt();
@@ -59,8 +87,17 @@ export default function HomePage() {
   }, [isInstalled, setInstalled]);
 
   useEffect(() => {
-    setCompletedRounds([]);
-  }, [result?.generatedAt]);
+    if (initialSharedLoad.restored) {
+      setConditions(initialSharedLoad.restored.input);
+      setResult(initialSharedLoad.restored.result, initialSharedLoad.restored.result.seed);
+      setErrorMessage(null);
+      return;
+    }
+
+    if (initialSharedLoad.errorMessage) {
+      setErrorMessage(initialSharedLoad.errorMessage);
+    }
+  }, [initialSharedLoad, setConditions, setErrorMessage, setResult]);
 
   function handleParticipantCountChange(nextCount: number) {
     const safeCount = Number.isFinite(nextCount) ? Math.max(4, nextCount) : 4;
@@ -80,8 +117,8 @@ export default function HomePage() {
     setRoundCount(safeCount);
   }
 
-  function currentInput(): MatchConditionInput {
-    return createInputModel({
+  function currentInput() {
+    return createAutoMatchConditionInput({
       eventName,
       participantCount,
       courtCount,
@@ -94,6 +131,7 @@ export default function HomePage() {
   }
 
   function handleGenerate() {
+    setSharedResultMessage(null);
     startTransition(() => {
       if (result) {
         regenerate(currentInput(), nextSeed() + 97);
@@ -105,12 +143,21 @@ export default function HomePage() {
   }
 
   function toggleRoundCompletion(roundNumber: number, checked: boolean) {
-    setCompletedRounds((current) => {
+    setCompletedRoundsState((current) => {
+      const generatedAt = result?.generatedAt ?? null;
+      const rounds = current.generatedAt === generatedAt ? current.rounds : [];
+
       if (checked) {
-        return current.includes(roundNumber) ? current : [...current, roundNumber];
+        return {
+          generatedAt,
+          rounds: rounds.includes(roundNumber) ? rounds : [...rounds, roundNumber],
+        };
       }
 
-      return current.filter((value) => value !== roundNumber);
+      return {
+        generatedAt,
+        rounds: rounds.filter((value) => value !== roundNumber),
+      };
     });
   }
 
@@ -132,7 +179,7 @@ export default function HomePage() {
             installHint={installHint}
             isInstalled={isInstalled}
             onPromptInstall={promptInstall}
-            onOpenShareDialog={() => setShareDialogOpen(true)}
+            onOpenShareDialog={() => setAppShareDialogOpen(true)}
           />
         </div>
       </header>
@@ -154,11 +201,17 @@ export default function HomePage() {
 
         {result ? (
           <>
+            {sharedResultMessage ? (
+              <section className="rounded-[1.5rem] border border-[rgba(240,106,60,0.22)] bg-[linear-gradient(135deg,rgba(240,106,60,0.12),rgba(255,255,255,0.96))] px-5 py-4 text-base leading-7 text-[var(--color-ink)]">
+                {sharedResultMessage}
+              </section>
+            ) : null}
+
             <section
               data-testid="result-summary"
-              className="grid gap-4 rounded-[1.8rem] border border-white/70 bg-white/92 p-5 shadow-[0_18px_50px_rgba(53,40,19,0.1)] backdrop-blur md:grid-cols-3"
+              className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-5 rounded-[1.8rem] border border-white/70 bg-white/92 p-5 shadow-[0_18px_50px_rgba(53,40,19,0.1)] backdrop-blur md:grid-cols-4 md:gap-4"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-base font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]">
                   Result
                 </p>
@@ -166,13 +219,25 @@ export default function HomePage() {
                   {result.conditions.eventName || "テニス対戦組合せApp"}
                 </p>
               </div>
-              <div>
+              <div className="flex items-start justify-end md:order-4 md:items-end">
+                <HoverTooltip text="この対戦表をURLまたはQRコードで共有します。">
+                  <button
+                    data-testid="open-result-share-button"
+                    type="button"
+                    onClick={() => setResultShareDialogOpen(true)}
+                    className="shrink-0 whitespace-nowrap rounded-full border border-[var(--color-line)] bg-white px-5 py-3 text-base font-semibold text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)]"
+                  >
+                    組合せ共有
+                  </button>
+                </HoverTooltip>
+              </div>
+              <div className="min-w-0 md:order-2">
                 <p className="text-base font-medium text-[var(--color-muted)]">採用シード</p>
                 <p data-testid="selected-seed" className="mt-2 text-xl font-semibold">
                   {currentSeed}
                 </p>
               </div>
-              <div>
+              <div className="min-w-0 md:order-3">
                 <p className="text-base font-medium text-[var(--color-muted)]">総合スコア</p>
                 <p data-testid="total-score" className="mt-2 text-xl font-semibold">
                   {result.score.totalScore}
@@ -186,7 +251,10 @@ export default function HomePage() {
                   key={`round-${round.roundNumber}`}
                   round={round}
                   participants={result.conditions.participants}
-                  completed={completedRounds.includes(round.roundNumber)}
+                  completed={
+                    completedRoundsState.generatedAt === result.generatedAt &&
+                    completedRoundsState.rounds.includes(round.roundNumber)
+                  }
                   onCompletedChange={(checked) => toggleRoundCompletion(round.roundNumber, checked)}
                 />
               ))}
@@ -213,7 +281,16 @@ export default function HomePage() {
           </>
         ) : null}
       </main>
-      <AppShareDialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} />
+      {appShareDialogOpen ? (
+        <AppShareDialog open={appShareDialogOpen} onClose={() => setAppShareDialogOpen(false)} />
+      ) : null}
+      {resultShareDialogOpen ? (
+        <ResultShareDialog
+          open={resultShareDialogOpen}
+          result={result}
+          onClose={() => setResultShareDialogOpen(false)}
+        />
+      ) : null}
     </ResponsiveShell>
   );
 }

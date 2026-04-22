@@ -3,15 +3,13 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import QRCode from "qrcode";
+import type { MatchupResult } from "@/features/matchmaking/model/types";
+import { buildSharedMatchUrl } from "@/features/matchmaking/application/shareMatchup";
 import { HoverTooltip } from "@/components/ui/HoverTooltip";
-import {
-  APP_SHARE_TEXT,
-  APP_SHARE_TITLE,
-  APP_SHARE_URL,
-} from "@/lib/constants/ui";
 
-type AppShareDialogProps = {
+type ResultShareDialogProps = {
   open: boolean;
+  result: MatchupResult | null;
   onClose: () => void;
 };
 
@@ -22,11 +20,27 @@ type ShareNavigator = Navigator & {
   };
 };
 
-export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
+function currentOriginUrl() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  return `${window.location.origin}/`;
+}
+
+export function ResultShareDialog({ open, result, onClose }: ResultShareDialogProps) {
   const [showQr, setShowQr] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [isPreparingQr, setIsPreparingQr] = useState(false);
+
+  const shareUrl = useMemo(() => {
+    if (!result) {
+      return "";
+    }
+
+    return buildSharedMatchUrl(result, currentOriginUrl());
+  }, [result]);
 
   const canNativeShare = useMemo(() => {
     if (typeof navigator === "undefined") {
@@ -36,9 +50,14 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
     return typeof (navigator as ShareNavigator).share === "function";
   }, []);
 
-  if (!open) {
+  if (!open || !result) {
     return null;
   }
+
+  const shareTitle = result.conditions.eventName
+    ? `${result.conditions.eventName} の対戦表`
+    : "テニス対戦組合せApp の対戦表";
+  const shareText = `${result.conditions.participants.length}人 / ${result.conditions.courtCount}面 / ${result.conditions.roundCount}回の対戦表です。`;
 
   async function handleNativeShare() {
     if (!canNativeShare) {
@@ -48,9 +67,9 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
 
     try {
       await (navigator as ShareNavigator).share?.({
-        title: APP_SHARE_TITLE,
-        text: APP_SHARE_TEXT,
-        url: APP_SHARE_URL,
+        title: shareTitle,
+        text: shareText,
+        url: shareUrl,
       });
     } catch {
       setFeedbackMessage("共有メニューを開けませんでした。URLコピーまたはQRコードをご利用ください。");
@@ -59,10 +78,10 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
 
   async function handleCopyUrl() {
     try {
-      await (navigator as ShareNavigator).clipboard?.writeText(APP_SHARE_URL);
-      setFeedbackMessage("URLをコピーしました。");
+      await (navigator as ShareNavigator).clipboard?.writeText(shareUrl);
+      setFeedbackMessage("共有URLをコピーしました。");
     } catch {
-      setFeedbackMessage("URLをコピーできませんでした。手動でコピーしてください。");
+      setFeedbackMessage("共有URLをコピーできませんでした。手動でコピーしてください。");
     }
   }
 
@@ -82,7 +101,7 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
     setIsPreparingQr(true);
 
     try {
-      const qr = await QRCode.toDataURL(APP_SHARE_URL, {
+      const qr = await QRCode.toDataURL(shareUrl, {
         margin: 1,
         width: 320,
         color: {
@@ -100,20 +119,23 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
 
   return (
     <div
-      data-testid="app-share-dialog"
+      data-testid="result-share-dialog"
       className="fixed inset-0 z-40 flex items-end justify-center bg-[rgba(18,18,18,0.45)] p-4 sm:items-center"
     >
-      <div className="w-full max-w-lg rounded-[1.8rem] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
+      <div className="w-full max-w-xl rounded-[1.8rem] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-base font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]">
-              Share
+              Share Result
             </p>
-            <h3 className="mt-2 text-2xl font-semibold">アプリURLを共有</h3>
+            <h3 className="mt-2 text-2xl font-semibold">この対戦表を共有</h3>
+            <p className="mt-3 text-base leading-7 text-[var(--color-muted)]">
+              URLまたはQRコードから開くと、同じ対戦組合せを別のスマホでも表示できます。
+            </p>
           </div>
           <HoverTooltip text="共有ダイアログを閉じます。">
             <button
-              data-testid="share-dialog-close-button"
+              data-testid="result-share-close-button"
               type="button"
               onClick={onClose}
               className="shrink-0 whitespace-nowrap rounded-full border border-[var(--color-line)] px-4 py-2 text-base leading-none"
@@ -125,15 +147,18 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
 
         <div className="mt-5 rounded-[1.2rem] bg-[var(--color-surface)] p-4">
           <p className="text-base font-medium text-[var(--color-muted)]">共有URL</p>
-          <p className="mt-2 break-all text-base leading-7 text-[var(--color-ink)]">
-            {APP_SHARE_URL}
+          <p
+            data-testid="result-share-url"
+            className="mt-2 break-all text-base leading-7 text-[var(--color-ink)]"
+          >
+            {shareUrl}
           </p>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <HoverTooltip text="端末の共有メニューを開いてURLを送れます。">
             <button
-              data-testid="native-share-button"
+              data-testid="result-native-share-button"
               type="button"
               onClick={() => void handleNativeShare()}
               className="rounded-[1.2rem] border border-[var(--color-line)] bg-white px-4 py-4 text-base font-semibold text-[var(--color-ink)]"
@@ -141,9 +166,9 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
               共有する
             </button>
           </HoverTooltip>
-          <HoverTooltip text="アプリURLをクリップボードへコピーします。">
+          <HoverTooltip text="共有URLをクリップボードへコピーします。">
             <button
-              data-testid="copy-url-button"
+              data-testid="result-copy-url-button"
               type="button"
               onClick={() => void handleCopyUrl()}
               className="rounded-[1.2rem] border border-[var(--color-line)] bg-white px-4 py-4 text-base font-semibold text-[var(--color-ink)]"
@@ -153,7 +178,7 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
           </HoverTooltip>
           <HoverTooltip text="別端末で読み取れるQRコードを表示または非表示にします。">
             <button
-              data-testid="toggle-qr-button"
+              data-testid="result-toggle-qr-button"
               type="button"
               onClick={() => void handleToggleQr()}
               className="rounded-[1.2rem] border border-[var(--color-line)] bg-white px-4 py-4 text-base font-semibold text-[var(--color-ink)]"
@@ -165,7 +190,7 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
 
         {feedbackMessage ? (
           <p
-            data-testid="share-feedback"
+            data-testid="result-share-feedback"
             className="mt-4 rounded-[1rem] border border-[var(--color-line)] bg-[#faf7f0] px-4 py-3 text-base leading-7 text-[var(--color-muted)]"
           >
             {feedbackMessage}
@@ -174,7 +199,7 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
 
         {showQr ? (
           <div
-            data-testid="share-qr-panel"
+            data-testid="result-share-qr-panel"
             className="mt-5 rounded-[1.4rem] border border-[var(--color-line)] bg-[linear-gradient(180deg,#fbfaf7_0%,#f5f1e8_100%)] p-5"
           >
             <p className="text-base font-medium text-[var(--color-muted)]">
@@ -183,9 +208,9 @@ export function AppShareDialog({ open, onClose }: AppShareDialogProps) {
             <div className="mt-4 flex justify-center">
               {qrCodeDataUrl ? (
                 <Image
-                  data-testid="share-qr-image"
+                  data-testid="result-share-qr-image"
                   src={qrCodeDataUrl}
-                  alt="アプリURLのQRコード"
+                  alt="共有URLのQRコード"
                   width={224}
                   height={224}
                   unoptimized
