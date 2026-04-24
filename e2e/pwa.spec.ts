@@ -15,12 +15,8 @@ test("serves a valid web manifest", async ({ request }) => {
   expect(manifest.display).toBe("standalone");
   expect(manifest.icons).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({
-        src: expect.stringMatching(/^\/icons\/icon-192\.png\?assetv=/),
-      }),
-      expect.objectContaining({
-        src: expect.stringMatching(/^\/icons\/icon-512\.png\?assetv=/),
-      }),
+      expect.objectContaining({ src: "/icons/icon-192.png" }),
+      expect.objectContaining({ src: "/icons/icon-512.png" }),
     ]),
   );
 });

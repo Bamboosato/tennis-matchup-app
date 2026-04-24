@@ -19,7 +19,6 @@ export const metadata: Metadata = {
   description:
     "PCブラウザとスマホブラウザの両方で使える、ダブルス向けのテニス対戦組合せアプリです。",
   applicationName: "テニス対戦組合せApp",
-  manifest: withAssetVersion("/manifest.webmanifest"),
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
