@@ -14,6 +14,12 @@ function createContext(conditions: MatchConditions, seed: number): GenerationCon
     appearanceCounts: Object.fromEntries(
       participantIds.map((participantId) => [participantId, 0]),
     ),
+    courtAppearanceCounts: Object.fromEntries(
+      participantIds.map((participantId) => [participantId, {}]),
+    ),
+    courtUsageCounts: Object.fromEntries(
+      Array.from({ length: conditions.courtCount }, (_, index) => [index + 1, 0]),
+    ),
     encounterMatrix: {},
     teammateMatrix: {},
     opponentMatrix: {},

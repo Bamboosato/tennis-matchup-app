@@ -77,6 +77,8 @@ export type GenerationContext = {
   seed: number;
   restCounts: Record<string, number>;
   appearanceCounts: Record<string, number>;
+  courtAppearanceCounts: Record<string, Record<number, number>>;
+  courtUsageCounts: Record<number, number>;
   encounterMatrix: PairCountMatrix;
   teammateMatrix: PairCountMatrix;
   opponentMatrix: PairCountMatrix;

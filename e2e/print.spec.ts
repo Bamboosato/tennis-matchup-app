@@ -13,4 +13,6 @@ test("opens print preview in a new page", async ({ page, context }) => {
   await expect(printPage.getByTestId("print-page")).toBeVisible();
   await expect(printPage.getByTestId("print-execute-button")).toBeVisible();
   await expect(printPage.getByText("A4 印刷プレビュー。問題なければ印刷を実行してください。")).toBeVisible();
+  await expect(printPage.getByTestId("print-share-qr-section")).toBeVisible();
+  await expect(printPage.getByTestId("print-share-qr-image")).toBeVisible();
 });

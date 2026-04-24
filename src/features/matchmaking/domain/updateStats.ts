@@ -1,10 +1,8 @@
 import { incrementMatrix } from "../utils/matrix";
 import type { GenerationContext, RoundResult } from "../model/types";
 
-function courtPlayerIds(round: RoundResult, courtIndex: number): string[] {
-  const court = round.courts[courtIndex];
-
-  if (!court || court.isUnused || !court.pairA || !court.pairB) {
+function courtPlayerIds(court: RoundResult["courts"][number]): string[] {
+  if (court.isUnused || !court.pairA || !court.pairB) {
     return [];
   }
 
@@ -25,12 +23,20 @@ export function updateStats(ctx: GenerationContext, round: RoundResult): void {
     ctx.restCounts[playerId] = (ctx.restCounts[playerId] ?? 0) + 1;
   }
 
-  round.courts.forEach((court, courtIndex) => {
-    const players = courtPlayerIds(round, courtIndex);
+  round.courts.forEach((court) => {
+    const players = courtPlayerIds(court);
 
     if (players.length !== 4 || !court.pairA || !court.pairB) {
       return;
     }
+
+    ctx.courtUsageCounts[court.courtNumber] = (ctx.courtUsageCounts[court.courtNumber] ?? 0) + 1;
+
+    players.forEach((playerId) => {
+      const counts = ctx.courtAppearanceCounts[playerId] ?? {};
+      counts[court.courtNumber] = (counts[court.courtNumber] ?? 0) + 1;
+      ctx.courtAppearanceCounts[playerId] = counts;
+    });
 
     for (let i = 0; i < players.length; i += 1) {
       for (let j = i + 1; j < players.length; j += 1) {

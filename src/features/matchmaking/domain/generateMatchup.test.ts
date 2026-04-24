@@ -60,4 +60,21 @@ describe("generateMatchup", () => {
       expect(stat.appearances).toBe(3);
     }
   });
+
+  it("spreads a single active match across the requested courts over time", () => {
+    const result = generateMatchup(conditions(7, 2, 6), 20260424);
+    const usageByCourt = result.rounds.reduce<Record<number, number>>((counts, round) => {
+      const activeCourt = round.courts.find((court) => !court.isUnused);
+
+      if (!activeCourt) {
+        return counts;
+      }
+
+      counts[activeCourt.courtNumber] = (counts[activeCourt.courtNumber] ?? 0) + 1;
+      return counts;
+    }, {});
+    const usageCounts = [usageByCourt[1] ?? 0, usageByCourt[2] ?? 0];
+
+    expect(Math.max(...usageCounts) - Math.min(...usageCounts)).toBeLessThanOrEqual(1);
+  });
 });

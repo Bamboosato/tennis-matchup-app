@@ -4,7 +4,7 @@ import type { MatchConditionInput, MatchupResult } from "../model/types";
 import { buildMatchConditions } from "./buildMatchConditions";
 import { APP_SHARE_URL } from "@/lib/constants/ui";
 
-const SHARE_QUERY_VERSION = "1";
+const SHARE_QUERY_VERSION = "1.00";
 
 const sharedMatchQuerySchema = z.object({
   shared: z.literal("1"),

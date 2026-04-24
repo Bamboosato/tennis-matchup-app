@@ -3,6 +3,8 @@ import { pickBestPairing } from "./pickBestPairing";
 import { ensureMatrixValue } from "../utils/matrix";
 import { seededValue } from "../utils/seededRandom";
 
+type ActiveCourtAssignment = Omit<CourtAssignment, "courtNumber" | "isUnused">;
+
 function encounterLoad(playerId: string, activePlayerIds: string[], ctx: GenerationContext): number {
   return activePlayerIds.reduce((sum, current) => {
     if (current === playerId) {
@@ -72,6 +74,130 @@ function pickBestCourtGroup(
   return group;
 }
 
+function courtPlayerIds(court: ActiveCourtAssignment): string[] {
+  if (!court.pairA || !court.pairB) {
+    return [];
+  }
+
+  return [
+    court.pairA.player1Id,
+    court.pairA.player2Id,
+    court.pairB.player1Id,
+    court.pairB.player2Id,
+  ];
+}
+
+function courtExposurePenalty(
+  playerIds: string[],
+  courtNumber: number,
+  ctx: GenerationContext,
+): number {
+  return playerIds.reduce((sum, playerId) => {
+    return sum + (ctx.courtAppearanceCounts[playerId]?.[courtNumber] ?? 0);
+  }, 0);
+}
+
+function buildCourtNumbers(courtCount: number): number[] {
+  return Array.from({ length: courtCount }, (_, index) => index + 1);
+}
+
+function rebalanceCourtNumbers(
+  activeCourts: ActiveCourtAssignment[],
+  ctx: GenerationContext,
+): CourtAssignment[] {
+  const allCourtNumbers = buildCourtNumbers(ctx.conditions.courtCount);
+
+  if (activeCourts.length === 0) {
+    return allCourtNumbers.map((courtNumber) => ({
+      courtNumber,
+      pairA: null,
+      pairB: null,
+      isUnused: true,
+    }));
+  }
+
+  const roundIndex = ctx.activeHistoryByRound.length + 1;
+  const serializedCourts = activeCourts.map((court) => courtPlayerIds(court).join(","));
+  let bestAssignment:
+    | {
+        courtNumbers: number[];
+        exposurePenalty: number;
+        usagePenalty: number;
+      }
+    | null = null;
+
+  function visit(
+    courtIndex: number,
+    remainingCourtNumbers: number[],
+    assignedCourtNumbers: number[],
+    exposurePenalty: number,
+    usagePenalty: number,
+  ): void {
+    if (courtIndex >= activeCourts.length) {
+      if (
+        !bestAssignment ||
+        exposurePenalty < bestAssignment.exposurePenalty ||
+        (exposurePenalty === bestAssignment.exposurePenalty &&
+          usagePenalty < bestAssignment.usagePenalty)
+      ) {
+        bestAssignment = {
+          courtNumbers: [...assignedCourtNumbers],
+          exposurePenalty,
+          usagePenalty,
+        };
+      }
+
+      return;
+    }
+
+    const playerIds = courtPlayerIds(activeCourts[courtIndex]);
+    const orderedCourtNumbers = [...remainingCourtNumbers].sort((left, right) => {
+      return (
+        seededValue(ctx.seed, "court-balance", roundIndex, courtIndex, left, serializedCourts[courtIndex]) -
+        seededValue(ctx.seed, "court-balance", roundIndex, courtIndex, right, serializedCourts[courtIndex])
+      );
+    });
+
+    for (const courtNumber of orderedCourtNumbers) {
+      const nextRemainingCourtNumbers = remainingCourtNumbers.filter(
+        (candidate) => candidate !== courtNumber,
+      );
+
+      visit(
+        courtIndex + 1,
+        nextRemainingCourtNumbers,
+        [...assignedCourtNumbers, courtNumber],
+        exposurePenalty + courtExposurePenalty(playerIds, courtNumber, ctx),
+        usagePenalty + (ctx.courtUsageCounts[courtNumber] ?? 0),
+      );
+    }
+  }
+
+  visit(0, allCourtNumbers, [], 0, 0);
+
+  const assignedCourtNumbers =
+    bestAssignment?.courtNumbers ?? allCourtNumbers.slice(0, activeCourts.length);
+  const activeAssignments = activeCourts.map((court, index) => ({
+    courtNumber: assignedCourtNumbers[index],
+    pairA: court.pairA,
+    pairB: court.pairB,
+    isUnused: false,
+  }));
+  const usedCourtNumberSet = new Set(assignedCourtNumbers);
+  const unusedAssignments = allCourtNumbers
+    .filter((courtNumber) => !usedCourtNumberSet.has(courtNumber))
+    .map((courtNumber) => ({
+      courtNumber,
+      pairA: null,
+      pairB: null,
+      isUnused: true,
+    }));
+
+  return [...activeAssignments, ...unusedAssignments].sort(
+    (left, right) => left.courtNumber - right.courtNumber,
+  );
+}
+
 export function assignCourts(
   activePlayerIds: string[],
   ctx: GenerationContext,
@@ -81,18 +207,16 @@ export function assignCourts(
     Math.floor(activePlayerIds.length / ctx.conditions.playersPerCourt),
   );
   const remaining = [...activePlayerIds];
-  const courts: CourtAssignment[] = [];
+  const activeCourts: ActiveCourtAssignment[] = [];
 
-  while (remaining.length >= 4 && courts.length < usableCourtCount) {
+  while (remaining.length >= 4 && activeCourts.length < usableCourtCount) {
     const basePlayerId = pickBasePlayer(remaining, ctx);
     const group = pickBestCourtGroup(basePlayerId, remaining, ctx);
     const [pairA, pairB] = pickBestPairing(group, ctx);
 
-    courts.push({
-      courtNumber: courts.length + 1,
+    activeCourts.push({
       pairA,
       pairB,
-      isUnused: false,
     });
 
     for (const playerId of group) {
@@ -104,14 +228,5 @@ export function assignCourts(
     }
   }
 
-  while (courts.length < ctx.conditions.courtCount) {
-    courts.push({
-      courtNumber: courts.length + 1,
-      pairA: null,
-      pairB: null,
-      isUnused: true,
-    });
-  }
-
-  return courts;
+  return rebalanceCourtNumbers(activeCourts, ctx);
 }

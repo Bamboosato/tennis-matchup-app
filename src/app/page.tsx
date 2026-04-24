@@ -15,6 +15,7 @@ import {
   restoreSharedMatchupFromSearch,
 } from "@/features/matchmaking/application/shareMatchup";
 import { useMatchupGeneration } from "@/hooks/useMatchupGeneration";
+import { useMatchupPdfExport } from "@/hooks/useMatchupPdfExport";
 import { usePrintPreview } from "@/hooks/usePrintPreview";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
 import { useMatchupStore } from "@/stores/matchupStore";
@@ -80,6 +81,7 @@ export default function HomePage() {
   const setErrorMessage = useMatchupStore((state) => state.setErrorMessage);
   const { generate, regenerate } = useMatchupGeneration();
   const { openPrintPreview } = usePrintPreview();
+  const { exportPdf, isExportingPdf, pdfErrorMessage, clearPdfError } = useMatchupPdfExport();
   const { canPromptInstall, installHint, isInstalled, promptInstall } = usePwaInstallPrompt();
 
   useEffect(() => {
@@ -132,6 +134,7 @@ export default function HomePage() {
 
   function handleGenerate() {
     setSharedResultMessage(null);
+    clearPdfError();
     startTransition(() => {
       if (result) {
         regenerate(currentInput(), nextSeed() + 97);
@@ -206,6 +209,11 @@ export default function HomePage() {
                 {sharedResultMessage}
               </section>
             ) : null}
+            {pdfErrorMessage ? (
+              <section className="rounded-[1.5rem] border border-[rgba(143,56,34,0.18)] bg-[#fff1ed] px-5 py-4 text-base leading-7 text-[#8f3822]">
+                {pdfErrorMessage}
+              </section>
+            ) : null}
 
             <section
               data-testid="result-summary"
@@ -275,6 +283,17 @@ export default function HomePage() {
                   className="rounded-full bg-[var(--color-accent)] px-6 py-3.5 text-base font-semibold text-white"
                 >
                   印刷プレビューを開く
+                </button>
+              </HoverTooltip>
+              <HoverTooltip text="現在の組合せをPDFファイルとして出力します。">
+                <button
+                  data-testid="pdf-export-button"
+                  type="button"
+                  onClick={() => void exportPdf(result)}
+                  disabled={isExportingPdf}
+                  className="rounded-full border border-[var(--color-line)] bg-white px-6 py-3.5 text-base font-semibold text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isExportingPdf ? "PDF出力中..." : "PDFを出力"}
                 </button>
               </HoverTooltip>
             </StickyActionBar>

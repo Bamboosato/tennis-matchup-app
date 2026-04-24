@@ -1,5 +1,6 @@
 import type { PrintModel } from "@/features/matchmaking/model/types";
 import { RoundCard } from "../results/RoundCard";
+import { PrintShareQr } from "./PrintShareQr";
 
 type PrintLayoutProps = {
   model: PrintModel;
@@ -76,6 +77,8 @@ export function PrintLayout({ model }: PrintLayoutProps) {
           />
         ))}
       </div>
+
+      <PrintShareQr result={model} />
     </div>
   );
 }

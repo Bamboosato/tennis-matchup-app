@@ -33,7 +33,7 @@ describe("shareMatchup", () => {
   it("rejects invalid shared matchup parameters", () => {
     expect(() =>
       restoreSharedMatchupFromSearch(
-        "?shared=1&v=1&participants=3&courts=1&rounds=2&seed=10",
+        "?shared=1&v=1.00&participants=3&courts=1&rounds=2&seed=10",
       ),
     ).toThrow();
   });
