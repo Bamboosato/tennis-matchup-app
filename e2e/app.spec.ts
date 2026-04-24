@@ -47,6 +47,23 @@ test("generates a matchup and shows summary data", async ({ page }) => {
   await expect(page.getByText("人ごとの集計")).toBeVisible();
 });
 
+test("uses the latest typed conditions without requiring blur before generation", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByTestId("participant-count-input").fill("19");
+  await page.getByTestId("court-count-input").fill("4");
+  await page.getByTestId("round-count-input").fill("12");
+
+  await expect(page.getByTestId("summary-usable-courts")).toHaveText("4 面");
+  await expect(page.getByTestId("summary-active-players")).toHaveText("16 人");
+  await expect(page.getByTestId("summary-rest-players")).toHaveText("3 人");
+
+  await page.getByTestId("generate-button").click();
+
+  await expect(page.getByTestId("round-card-12")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toContainText("Court 4");
+});
+
 test("re-tapping generate updates the selected seed", async ({ page }) => {
   await page.goto("/");
 

@@ -4,49 +4,40 @@ import { HoverTooltip } from "@/components/ui/HoverTooltip";
 type ConditionFormProps = {
   eventName: string;
   participantCount: number;
+  participantCountInput: string;
   courtCount: number;
-  roundCount: number;
+  courtCountInput: string;
+  roundCountInput: string;
   isGenerating: boolean;
   errorMessage: string | null;
   onEventNameChange: (value: string) => void;
-  onParticipantCountChange: (value: number) => void;
-  onCourtCountChange: (value: number) => void;
-  onRoundCountChange: (value: number) => void;
+  onParticipantCountChange: (value: string) => void;
+  onParticipantCountCommit: () => void;
+  onCourtCountChange: (value: string) => void;
+  onCourtCountCommit: () => void;
+  onRoundCountChange: (value: string) => void;
+  onRoundCountCommit: () => void;
   onSubmit: () => void;
 };
 
 export function ConditionForm({
   eventName,
   participantCount,
+  participantCountInput,
   courtCount,
-  roundCount,
+  courtCountInput,
+  roundCountInput,
   isGenerating,
   errorMessage,
   onEventNameChange,
   onParticipantCountChange,
+  onParticipantCountCommit,
   onCourtCountChange,
+  onCourtCountCommit,
   onRoundCountChange,
+  onRoundCountCommit,
   onSubmit,
 }: ConditionFormProps) {
-  function commitNumberInput(
-    input: HTMLInputElement,
-    fallbackValue: number,
-    minValue: number,
-    onCommit: (value: number) => void,
-  ) {
-    const parsed = Number(input.value);
-
-    if (!Number.isFinite(parsed)) {
-      input.value = String(fallbackValue);
-      onCommit(fallbackValue);
-      return;
-    }
-
-    const safeValue = Math.max(minValue, Math.trunc(parsed));
-    input.value = String(safeValue);
-    onCommit(safeValue);
-  }
-
   return (
     <section
       data-testid="condition-form"
@@ -81,16 +72,15 @@ export function ConditionForm({
             inputMode="numeric"
             pattern="[0-9]*"
             min={4}
-            defaultValue={participantCount}
-            onBlur={(event) =>
-              commitNumberInput(event.currentTarget, participantCount, 4, onParticipantCountChange)
-            }
+            value={participantCountInput}
+            onChange={(event) => onParticipantCountChange(event.target.value)}
+            onBlur={onParticipantCountCommit}
             onKeyDown={(event) => {
               if (event.key !== "Enter") {
                 return;
               }
 
-              commitNumberInput(event.currentTarget, participantCount, 4, onParticipantCountChange);
+              onParticipantCountCommit();
             }}
             className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)]"
           />
@@ -104,16 +94,15 @@ export function ConditionForm({
             inputMode="numeric"
             pattern="[0-9]*"
             min={1}
-            defaultValue={courtCount}
-            onBlur={(event) =>
-              commitNumberInput(event.currentTarget, courtCount, 1, onCourtCountChange)
-            }
+            value={courtCountInput}
+            onChange={(event) => onCourtCountChange(event.target.value)}
+            onBlur={onCourtCountCommit}
             onKeyDown={(event) => {
               if (event.key !== "Enter") {
                 return;
               }
 
-              commitNumberInput(event.currentTarget, courtCount, 1, onCourtCountChange);
+              onCourtCountCommit();
             }}
             className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)]"
           />
@@ -127,16 +116,15 @@ export function ConditionForm({
             inputMode="numeric"
             pattern="[0-9]*"
             min={1}
-            defaultValue={roundCount}
-            onBlur={(event) =>
-              commitNumberInput(event.currentTarget, roundCount, 1, onRoundCountChange)
-            }
+            value={roundCountInput}
+            onChange={(event) => onRoundCountChange(event.target.value)}
+            onBlur={onRoundCountCommit}
             onKeyDown={(event) => {
               if (event.key !== "Enter") {
                 return;
               }
 
-              commitNumberInput(event.currentTarget, roundCount, 1, onRoundCountChange);
+              onRoundCountCommit();
             }}
             className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)]"
           />

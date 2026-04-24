@@ -20,6 +20,20 @@ import { usePrintPreview } from "@/hooks/usePrintPreview";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
 import { useMatchupStore } from "@/stores/matchupStore";
 
+function parseDraftCount(value: string): number | null {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return Math.trunc(parsed);
+}
+
 export default function HomePage() {
   const [initialSharedLoad] = useState(() => {
     if (typeof window === "undefined") {
@@ -56,8 +70,11 @@ export default function HomePage() {
   const [participantCount, setParticipantCount] = useState(
     initialSharedLoad.restored?.input.participantCount ?? 8,
   );
+  const [participantCountInput, setParticipantCountInput] = useState(String(participantCount));
   const [courtCount, setCourtCount] = useState(initialSharedLoad.restored?.input.courtCount ?? 2);
+  const [courtCountInput, setCourtCountInput] = useState(String(courtCount));
   const [roundCount, setRoundCount] = useState(initialSharedLoad.restored?.input.roundCount ?? 4);
+  const [roundCountInput, setRoundCountInput] = useState(String(roundCount));
   const [completedRoundsState, setCompletedRoundsState] = useState<{
     generatedAt: string | null;
     rounds: number[];
@@ -101,22 +118,55 @@ export default function HomePage() {
     }
   }, [initialSharedLoad, setConditions, setErrorMessage, setResult]);
 
-  function handleParticipantCountChange(nextCount: number) {
-    const safeCount = Number.isFinite(nextCount) ? Math.max(4, nextCount) : 4;
+  function handleParticipantCountChange(value: string) {
+    setParticipantCountInput(value);
+    const parsed = parseDraftCount(value);
+
+    if (parsed === null) {
+      return;
+    }
+
+    const safeCount = Math.max(4, parsed);
 
     setParticipantCount(safeCount);
   }
 
-  function handleCourtCountChange(nextCount: number) {
-    const safeCount = Number.isFinite(nextCount) ? Math.max(1, nextCount) : 1;
+  function commitParticipantCount() {
+    setParticipantCountInput(String(participantCount));
+  }
+
+  function handleCourtCountChange(value: string) {
+    setCourtCountInput(value);
+    const parsed = parseDraftCount(value);
+
+    if (parsed === null) {
+      return;
+    }
+
+    const safeCount = Math.max(1, parsed);
 
     setCourtCount(safeCount);
   }
 
-  function handleRoundCountChange(nextCount: number) {
-    const safeCount = Number.isFinite(nextCount) ? Math.max(1, nextCount) : 1;
+  function commitCourtCount() {
+    setCourtCountInput(String(courtCount));
+  }
+
+  function handleRoundCountChange(value: string) {
+    setRoundCountInput(value);
+    const parsed = parseDraftCount(value);
+
+    if (parsed === null) {
+      return;
+    }
+
+    const safeCount = Math.max(1, parsed);
 
     setRoundCount(safeCount);
+  }
+
+  function commitRoundCount() {
+    setRoundCountInput(String(roundCount));
   }
 
   function currentInput() {
@@ -191,14 +241,19 @@ export default function HomePage() {
         <ConditionForm
           eventName={eventName}
           participantCount={participantCount}
+          participantCountInput={participantCountInput}
           courtCount={courtCount}
-          roundCount={roundCount}
+          courtCountInput={courtCountInput}
+          roundCountInput={roundCountInput}
           isGenerating={isGenerating}
           errorMessage={errorMessage}
           onEventNameChange={setEventName}
           onParticipantCountChange={handleParticipantCountChange}
+          onParticipantCountCommit={commitParticipantCount}
           onCourtCountChange={handleCourtCountChange}
+          onCourtCountCommit={commitCourtCount}
           onRoundCountChange={handleRoundCountChange}
+          onRoundCountCommit={commitRoundCount}
           onSubmit={handleGenerate}
         />
 
