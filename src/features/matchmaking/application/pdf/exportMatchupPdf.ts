@@ -3,6 +3,7 @@
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import QRCode from "qrcode";
+import { withAssetVersion } from "@/lib/constants/assets";
 import type { MatchupResult } from "../../model/types";
 import { buildSharedMatchUrl } from "../shareMatchup";
 import {
@@ -11,7 +12,7 @@ import {
   truncateTextToWidth,
 } from "./buildPdfDocumentModel";
 
-const PDF_FONT_URL = "/fonts/NotoSansJP-VF.ttf";
+const PDF_FONT_URL = withAssetVersion("/fonts/NotoSansJP-VF.ttf");
 const PDF_FONT_FILE = "NotoSansJP-VF.ttf";
 const PDF_FONT_FAMILY = "NotoSansJP";
 

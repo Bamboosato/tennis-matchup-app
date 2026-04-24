@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, IBM_Plex_Sans_JP } from "next/font/google";
+import { withAssetVersion } from "@/lib/constants/assets";
 import "./globals.css";
 
 const displayFont = Fraunces({
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
   description:
     "PCブラウザとスマホブラウザの両方で使える、ダブルス向けのテニス対戦組合せアプリです。",
   applicationName: "テニス対戦組合せApp",
+  manifest: withAssetVersion("/manifest.webmanifest"),
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -25,10 +27,24 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      {
+        url: withAssetVersion("/icons/icon-192.png"),
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: withAssetVersion("/icons/icon-512.png"),
+        sizes: "512x512",
+        type: "image/png",
+      },
     ],
-    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [
+      {
+        url: withAssetVersion("/icons/icon-192.png"),
+        sizes: "192x192",
+        type: "image/png",
+      },
+    ],
   },
 };
 
