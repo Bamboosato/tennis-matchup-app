@@ -4,6 +4,11 @@ import { ensureMatrixValue } from "../utils/matrix";
 import { seededValue } from "../utils/seededRandom";
 
 type ActiveCourtAssignment = Omit<CourtAssignment, "courtNumber" | "isUnused">;
+type BestCourtAssignment = {
+  courtNumbers: number[];
+  exposurePenalty: number;
+  usagePenalty: number;
+};
 
 function encounterLoad(playerId: string, activePlayerIds: string[], ctx: GenerationContext): number {
   return activePlayerIds.reduce((sum, current) => {
@@ -118,13 +123,7 @@ function rebalanceCourtNumbers(
 
   const roundIndex = ctx.activeHistoryByRound.length + 1;
   const serializedCourts = activeCourts.map((court) => courtPlayerIds(court).join(","));
-  let bestAssignment:
-    | {
-        courtNumbers: number[];
-        exposurePenalty: number;
-        usagePenalty: number;
-      }
-    | null = null;
+  let bestAssignment: BestCourtAssignment | undefined;
 
   function visit(
     courtIndex: number,
@@ -175,8 +174,9 @@ function rebalanceCourtNumbers(
 
   visit(0, allCourtNumbers, [], 0, 0);
 
-  const assignedCourtNumbers =
-    bestAssignment?.courtNumbers ?? allCourtNumbers.slice(0, activeCourts.length);
+  const assignedCourtNumbers = bestAssignment
+    ? bestAssignment.courtNumbers
+    : allCourtNumbers.slice(0, activeCourts.length);
   const activeAssignments = activeCourts.map((court, index) => ({
     courtNumber: assignedCourtNumbers[index],
     pairA: court.pairA,
