@@ -87,6 +87,15 @@ describe("buildPdfDocumentModel", () => {
       restCell: "05, 06",
     });
   });
+
+  it("sorts rest players in ascending participant order for pdf output", () => {
+    const pdfResult = result(1);
+    pdfResult.rounds[0]!.restPlayerIds = ["player-06", "player-05"];
+
+    const model = buildPdfDocumentModel(pdfResult);
+
+    expect(model.pages[0]?.rows[0]?.restCell).toBe("05, 06");
+  });
 });
 
 describe("truncateTextToWidth", () => {

@@ -42,6 +42,10 @@ function createParticipantNameMap(participants: Participant[]) {
   return new Map(participants.map((participant) => [participant.id, participant.name]));
 }
 
+function createParticipantOrderMap(participants: Participant[]) {
+  return new Map(participants.map((participant) => [participant.id, participant.index]));
+}
+
 function formatPairName(
   player1Id: string,
   player2Id: string,
@@ -70,12 +74,17 @@ function formatCourtCell(
 function formatRestCell(
   restPlayerIds: string[],
   participantNameById: Map<string, string>,
+  participantOrderById: Map<string, number>,
 ) {
   if (restPlayerIds.length === 0) {
     return "-";
   }
 
   return restPlayerIds
+    .toSorted((left, right) => {
+      return (participantOrderById.get(left) ?? Number.MAX_SAFE_INTEGER) -
+        (participantOrderById.get(right) ?? Number.MAX_SAFE_INTEGER);
+    })
     .map((playerId) => participantNameById.get(playerId) ?? playerId)
     .join(", ");
 }
@@ -83,11 +92,12 @@ function formatRestCell(
 function buildPdfRow(
   round: RoundResult,
   participantNameById: Map<string, string>,
+  participantOrderById: Map<string, number>,
 ): PdfTableRow {
   return {
     roundLabel: String(round.roundNumber),
     courtCells: round.courts.map((court) => formatCourtCell(court, participantNameById)),
-    restCell: formatRestCell(round.restPlayerIds, participantNameById),
+    restCell: formatRestCell(round.restPlayerIds, participantNameById, participantOrderById),
   };
 }
 
@@ -121,6 +131,7 @@ export function pickPdfTypography(params: {
 
 export function buildPdfDocumentModel(result: MatchupResult): PdfDocumentModel {
   const participantNameById = createParticipantNameMap(result.conditions.participants);
+  const participantOrderById = createParticipantOrderMap(result.conditions.participants);
   const pages: PdfPageModel[] = [];
 
   for (let offset = 0; offset < result.rounds.length; offset += PDF_ROUNDS_PER_PAGE) {
@@ -128,7 +139,7 @@ export function buildPdfDocumentModel(result: MatchupResult): PdfDocumentModel {
       pageNumber: pages.length + 1,
       rows: result.rounds
         .slice(offset, offset + PDF_ROUNDS_PER_PAGE)
-        .map((round) => buildPdfRow(round, participantNameById)),
+        .map((round) => buildPdfRow(round, participantNameById, participantOrderById)),
     });
   }
 
