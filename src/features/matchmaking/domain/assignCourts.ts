@@ -1,4 +1,4 @@
-import type { CourtAssignment, GenerationContext } from "../model/types";
+import type { CourtAssignment, GenerationContext, ParticipantGender } from "../model/types";
 import { pickBestPairing } from "./pickBestPairing";
 import { ensureMatrixValue } from "../utils/matrix";
 import { seededValue } from "../utils/seededRandom";
@@ -9,6 +9,45 @@ type BestCourtAssignment = {
   exposurePenalty: number;
   usagePenalty: number;
 };
+
+function genderOf(playerId: string, ctx: GenerationContext): ParticipantGender | undefined {
+  return ctx.conditions.participants.find((participant) => participant.id === playerId)?.gender;
+}
+
+function countGenders(playerIds: string[], ctx: GenerationContext) {
+  return playerIds.reduce(
+    (counts, playerId) => {
+      const gender = genderOf(playerId, ctx);
+
+      if (gender === "female") {
+        counts.female += 1;
+      } else if (gender === "male") {
+        counts.male += 1;
+      }
+
+      return counts;
+    },
+    { female: 0, male: 0 },
+  );
+}
+
+function groupGenderPenalty(playerIds: string[], ctx: GenerationContext): number {
+  if (ctx.conditions.matchupMode === "standard") {
+    return 0;
+  }
+
+  const counts = countGenders(playerIds, ctx);
+
+  if (ctx.conditions.matchupMode === "sameGenderPriority") {
+    return Math.min(counts.female, counts.male);
+  }
+
+  return Math.abs(counts.female - counts.male);
+}
+
+function currentRoundWeight(ctx: GenerationContext): number {
+  return Math.max(1, ctx.conditions.roundCount - ctx.activeHistoryByRound.length);
+}
 
 function encounterLoad(playerId: string, activePlayerIds: string[], ctx: GenerationContext): number {
   return activePlayerIds.reduce((sum, current) => {
@@ -37,6 +76,9 @@ function scoreCandidateForGroup(
   currentGroup: string[],
   ctx: GenerationContext,
 ): number {
+  const nextGroup = [...currentGroup, candidateId];
+  const genderPenalty = groupGenderPenalty(nextGroup, ctx) * currentRoundWeight(ctx) * 4;
+
   return currentGroup.reduce((score, currentPlayerId) => {
     const encounterPenalty =
       ensureMatrixValue(ctx.encounterMatrix, candidateId, currentPlayerId) * 12;
@@ -46,7 +88,7 @@ function scoreCandidateForGroup(
       ensureMatrixValue(ctx.opponentMatrix, candidateId, currentPlayerId) * 3;
 
     return score + encounterPenalty + teammatePenalty + opponentPenalty;
-  }, 0);
+  }, genderPenalty);
 }
 
 function pickBestCourtGroup(

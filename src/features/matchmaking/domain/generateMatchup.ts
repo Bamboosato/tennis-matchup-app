@@ -54,7 +54,7 @@ export function generateMatchup(
   }
 
   const stats = buildPlayerStats(ctx);
-  const score = calculateScore(ctx, stats);
+  const score = calculateScore(ctx, stats, rounds);
 
   return {
     conditions,

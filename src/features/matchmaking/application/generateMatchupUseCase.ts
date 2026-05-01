@@ -18,6 +18,10 @@ function compareResults(left: MatchupResult, right: MatchupResult): number {
     return left.score.totalScore - right.score.totalScore;
   }
 
+  if (left.score.genderPreferencePenalty !== right.score.genderPreferencePenalty) {
+    return left.score.genderPreferencePenalty - right.score.genderPreferencePenalty;
+  }
+
   if (left.score.encounterPenalty !== right.score.encounterPenalty) {
     return left.score.encounterPenalty - right.score.encounterPenalty;
   }

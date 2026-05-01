@@ -356,5 +356,5 @@ export async function exportMatchupPdf(result: MatchupResult, baseUrl?: string) 
     drawFooter(doc, page.pageNumber, model.pages.length, qrCodeDataUrl);
   });
 
-  doc.save(buildPdfFileName(model.eventName));
+  doc.save(buildPdfFileName(result));
 }

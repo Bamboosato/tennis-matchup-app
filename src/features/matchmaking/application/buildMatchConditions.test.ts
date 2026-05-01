@@ -18,6 +18,7 @@ describe("buildMatchConditions", () => {
     });
 
     expect(result.eventName).toBe("週末テニス会");
+    expect(result.matchupMode).toBe("standard");
     expect(result.playersPerCourt).toBe(4);
     expect(result.participants).toEqual([
       { id: "p1", name: "佐藤", index: 0 },
@@ -39,6 +40,48 @@ describe("buildMatchConditions", () => {
           { id: "p2", name: "B" },
           { id: "p3", name: "C" },
           { id: "p4", name: "D" },
+        ],
+      }),
+    ).toThrow(ZodError);
+  });
+
+  it("keeps gender only for gender-aware modes", () => {
+    const result = buildMatchConditions({
+      eventName: "gender",
+      matchupMode: "mixedDoublesPriority",
+      participantCount: 4,
+      courtCount: 1,
+      roundCount: 1,
+      participants: [
+        { id: "p1", name: "01", gender: "female" },
+        { id: "p2", name: "02", gender: "female" },
+        { id: "p3", name: "03", gender: "male" },
+        { id: "p4", name: "04", gender: "male" },
+      ],
+    });
+
+    expect(result.matchupMode).toBe("mixedDoublesPriority");
+    expect(result.participants.map((participant) => participant.gender)).toEqual([
+      "female",
+      "female",
+      "male",
+      "male",
+    ]);
+  });
+
+  it("rejects gender-aware modes without participant gender", () => {
+    expect(() =>
+      buildMatchConditions({
+        eventName: "gender",
+        matchupMode: "sameGenderPriority",
+        participantCount: 4,
+        courtCount: 1,
+        roundCount: 1,
+        participants: [
+          { id: "p1", name: "01" },
+          { id: "p2", name: "02" },
+          { id: "p3", name: "03" },
+          { id: "p4", name: "04" },
         ],
       }),
     ).toThrow(ZodError);
