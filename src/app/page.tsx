@@ -1,6 +1,8 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
+import Link from "next/link";
+import { Settings } from "lucide-react";
 import { ConditionForm } from "@/components/conditions/ConditionForm";
 import { ResponsiveShell } from "@/components/layout/ResponsiveShell";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
@@ -217,7 +219,15 @@ export default function HomePage() {
   return (
     <ResponsiveShell>
       <header className="mb-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="flex min-h-[110px] flex-col justify-center rounded-[2rem] border border-white/65 bg-[linear-gradient(135deg,rgba(244,112,66,0.22),rgba(255,255,255,0.94))] px-5 py-4 shadow-[0_22px_70px_rgba(53,40,19,0.12)] sm:min-h-[116px] sm:px-6 sm:py-4">
+        <section className="relative flex min-h-[110px] flex-col justify-center rounded-[2rem] border border-white/65 bg-[linear-gradient(135deg,rgba(244,112,66,0.22),rgba(255,255,255,0.94))] px-5 py-4 shadow-[0_22px_70px_rgba(53,40,19,0.12)] sm:min-h-[116px] sm:px-6 sm:py-4">
+          <Link
+            href="/admin"
+            aria-label="管理画面を開く"
+            title="管理画面"
+            className="absolute right-5 top-4 hidden h-11 w-11 items-center justify-center rounded-full border border-[var(--color-line)] bg-white text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition hover:border-[var(--color-accent)] lg:inline-flex"
+          >
+            <Settings size={20} />
+          </Link>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-ink)]">
             Tennis Matchup App
           </p>
