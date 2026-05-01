@@ -1,10 +1,16 @@
+export type MatchupMode = "standard" | "sameGenderPriority" | "mixedDoublesPriority";
+
+export type ParticipantGender = "female" | "male";
+
 export type ParticipantInput = {
   id: string;
   name: string;
+  gender?: ParticipantGender;
 };
 
 export type MatchConditionInput = {
   eventName?: string;
+  matchupMode?: MatchupMode;
   participantCount: number;
   participants: ParticipantInput[];
   courtCount: number;
@@ -14,11 +20,13 @@ export type MatchConditionInput = {
 export type Participant = {
   id: string;
   name: string;
+  gender?: ParticipantGender;
   index: number;
 };
 
 export type MatchConditions = {
   eventName?: string;
+  matchupMode: MatchupMode;
   participants: Participant[];
   courtCount: number;
   roundCount: number;
@@ -47,6 +55,7 @@ export type RoundResult = {
 export type ResultScore = {
   fairnessPenalty: number;
   consecutiveRestPenalty: number;
+  genderPreferencePenalty: number;
   encounterPenalty: number;
   sameTeammatePenalty: number;
   sameOpponentPenalty: number;
