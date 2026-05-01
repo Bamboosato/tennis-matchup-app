@@ -15,6 +15,9 @@
 - 印刷プレビュー画面を別タブで開いて A4 印刷
 - 現在の組合せを PDF として出力
 - PWA としてホーム画面追加に対応
+- 別アプリ向けに組合せ生成 / seed 再現 API を公開
+- PC向け管理画面でアカウント別 APIキー、scope、rate limit、有効/無効を管理
+- 監査ログと API利用ログを管理画面で確認
 
 ## 画面と挙動
 
@@ -58,6 +61,31 @@
 - 対応ブラウザではインストールプロンプトを表示
 - iPhone / iPad では共有メニューからホーム画面追加
 
+### API / 管理画面
+
+- ホーム画面の Gear Icon から PC のみ `/admin` に遷移
+- 管理画面は管理者パスワードでログイン
+- アカウント単位で APIキーを発行し、登録後の生キーは再表示しない
+- 紛失時は管理画面から APIキーを再発行
+- scope は `matchups:generate` / `matchups:replay` を個別に許可
+- rate limit はアカウント単位で 1分あたりの回数を設定
+- 公開 API は `Authorization: Bearer <API_KEY>` で認証
+
+| Method | Path | 用途 |
+| --- | --- | --- |
+| POST | `/api/v1/matchups/generate` | UI と同じく最適化して組合せを生成 |
+| POST | `/api/v1/matchups/replay` | 確定済み seed で同じ組合せを再現 |
+
+API入力上限は以下です。
+
+| 項目 | 上限 |
+| --- | ---: |
+| 参加人数 | 30 |
+| 面数 | 8 |
+| 回数 | 20 |
+
+詳細仕様は [docs/api-design.md](docs/api-design.md) と [docs/api-admin-design.md](docs/api-admin-design.md) を参照してください。
+
 ## 技術スタック
 
 - Next.js 16
@@ -68,6 +96,8 @@
 - Tailwind CSS 4
 - jsPDF
 - jspdf-autotable
+- Firebase Admin SDK
+- Cloud Firestore
 - Vitest
 - Playwright
 
@@ -92,6 +122,20 @@ npm run dev
 
 ブラウザで [http://localhost:3000](http://localhost:3000) を開きます。
 
+### 環境変数
+
+管理画面と公開 API を利用する場合は、`.env.local` または Vercel Environment Variables に以下を設定します。
+
+```env
+FIREBASE_PROJECT_ID=tennis-matchup-app
+FIREBASE_CLIENT_EMAIL=<Firebase Admin SDK service account email>
+FIREBASE_PRIVATE_KEY=<Firebase Admin SDK private key>
+ADMIN_PASSWORD_HASH=<pbkdf2 password hash>
+ADMIN_SESSION_SECRET=<random secret>
+```
+
+`FIREBASE_PRIVATE_KEY` は改行を `\n` として設定できます。APIキーは管理画面で発行するため、固定値を環境変数に直接保存しません。
+
 ## 主要コマンド
 
 ```bash
@@ -111,22 +155,28 @@ npm run test:e2e
 - 再作成で採用 seed が更新されること
 - 印刷プレビューが別タブで開くこと
 - PDFがダウンロードできること
+- 管理画面でログイン、アカウント登録、APIキー再発行、設定更新ができること
+- 有効な APIキーで generate / replay API を呼び出せること
 
 ### データ観点
 
 - 参加人数に対して使用可能なコート数が正しく計算されること
 - 休憩人数、出場人数、ラウンド数が条件どおりに扱われること
+- API入力上限、scope、rate limit、有効/無効状態が正しく判定されること
 
 ### UI観点
 
 - PC / スマホで条件入力と結果表示が破綻しないこと
 - 印刷用画面で主要情報が確認できること
 - PDFでヘッダ、表、QR、ページ番号が破綻しないこと
+- 管理画面は PC のみ表示され、スマホでは利用不可の案内になること
 
 ### 非機能観点
 
 - ビルドが通ること
 - PWA インストール導線が成立すること
+- Firestore 障害時に API が fail closed で失敗すること
+- APIキーや参加者名などの秘匿情報をログに残さないこと
 
 ## ローカル確認手順
 
@@ -148,15 +198,24 @@ npm run test:e2e
 npm run build
 ```
 
+### 4. 管理画面 / API 確認
+
+1. `.env.local` に Firebase Admin SDK と管理者認証用の環境変数を設定
+2. `npm run dev` で起動
+3. PC 幅のブラウザで `/admin` にアクセス
+4. 管理者ログイン後、アカウントを追加して APIキーを登録
+5. `POST /api/v1/matchups/generate` と `POST /api/v1/matchups/replay` を `Authorization: Bearer <API_KEY>` 付きで実行
+6. 管理画面で監査ログと API利用ログを確認
+
 ## ディレクトリ概要
 
 ```text
 src/
-  app/          画面とルート
+  app/          画面、Route Handler、管理画面
   components/   UI コンポーネント
-  features/     組合せ生成ロジック
+  features/     組合せ生成ロジック、管理機能
   hooks/        画面ロジック
-  lib/          定数
+  lib/          定数、server 共通処理
   stores/       Zustand ストア
 e2e/            Playwright テスト
 public/         アイコンなどの静的ファイル
@@ -169,6 +228,7 @@ Vercel で公開しています。現在の運用は以下です。
 - GitHub: `main` ブランチ運用
 - Vercel: GitHub 連携で自動デプロイ
 - `main` への push で本番反映
+- 管理画面 / API を利用する環境では Firebase Admin SDK と管理者認証用の環境変数が必要
 
 ### 初回デプロイの流れ
 
@@ -176,11 +236,13 @@ Vercel で公開しています。現在の運用は以下です。
 2. `main` ブランチを push
 3. Vercel で GitHub リポジトリを Import
 4. `Next.js` 設定のまま Deploy
-
-このプロジェクトでは、現時点で必須の環境変数はありません。
+5. Firebase プロジェクトを作成し、Cloud Firestore を有効化
+6. Firebase Admin SDK のサービスアカウント情報を Vercel Environment Variables に設定
+7. `ADMIN_PASSWORD_HASH` と `ADMIN_SESSION_SECRET` を Vercel Environment Variables に設定
 
 ## バージョン管理
 
 - アプリ version は `package.json` で管理
 - 初回公開タグは `v0.1.0`
+- API / 管理画面追加リリースは `v1.1.0`
 - 開発ラインは Git ブランチで分離し、version とは別で扱う
