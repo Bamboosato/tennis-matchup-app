@@ -53,5 +53,29 @@ describe("matchup API schemas", () => {
     expect(replayMatchupApiSchema.safeParse(input()).success).toBe(false);
     expect(replayMatchupApiSchema.safeParse(input({ seed: 123 })).success).toBe(true);
   });
-});
 
+  it("accepts gender-aware modes when each participant has gender", () => {
+    const parsed = generateMatchupApiSchema.safeParse(
+      input({
+        matchupMode: "mixedDoublesPriority",
+        participants: Array.from({ length: 8 }, (_, index) => ({
+          id: `p${index + 1}`,
+          name: `Player ${index + 1}`,
+          gender: index < 4 ? "female" : "male",
+        })),
+      }),
+    );
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects gender-aware modes without participant gender", () => {
+    const parsed = generateMatchupApiSchema.safeParse(
+      input({
+        matchupMode: "sameGenderPriority",
+      }),
+    );
+
+    expect(parsed.success).toBe(false);
+  });
+});

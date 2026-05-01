@@ -5,6 +5,7 @@ import { generateMatchup } from "./generateMatchup";
 function conditions(participantCount: number, courtCount: number, roundCount: number): MatchConditions {
   return {
     eventName: "test",
+    matchupMode: "standard",
     participants: Array.from({ length: participantCount }, (_, index) => ({
       id: `p${index + 1}`,
       name: `Player ${index + 1}`,
@@ -14,6 +15,49 @@ function conditions(participantCount: number, courtCount: number, roundCount: nu
     roundCount,
     playersPerCourt: 4,
   };
+}
+
+function genderConditions(
+  matchupMode: MatchConditions["matchupMode"],
+  genders: Array<"female" | "male">,
+  courtCount: number,
+  roundCount: number,
+): MatchConditions {
+  return {
+    eventName: "gender-test",
+    matchupMode,
+    participants: genders.map((gender, index) => ({
+      id: `p${index + 1}`,
+      name: `Player ${index + 1}`,
+      gender,
+      index,
+    })),
+    courtCount,
+    roundCount,
+    playersPerCourt: 4,
+  };
+}
+
+function courtGenders(
+  result: ReturnType<typeof generateMatchup>,
+  roundIndex: number,
+  courtIndex: number,
+) {
+  const genderById = new Map(
+    result.conditions.participants.map((participant) => [participant.id, participant.gender]),
+  );
+  const court = result.rounds[roundIndex]!.courts[courtIndex]!;
+
+  if (court.isUnused || !court.pairA || !court.pairB) {
+    return [];
+  }
+
+  return [
+    court.pairA.player1Id,
+    court.pairA.player2Id,
+    court.pairB.player1Id,
+    court.pairB.player2Id,
+  ].map((playerId) => genderById.get(playerId));
 }
 
 describe("generateMatchup", () => {
@@ -76,5 +120,65 @@ describe("generateMatchup", () => {
     const usageCounts = [usageByCourt[1] ?? 0, usageByCourt[2] ?? 0];
 
     expect(Math.max(...usageCounts) - Math.min(...usageCounts)).toBeLessThanOrEqual(1);
+  });
+
+  it("prioritizes all-same-gender courts in same-gender mode", () => {
+    const result = generateMatchup(
+      genderConditions(
+        "sameGenderPriority",
+        ["female", "female", "female", "female", "male", "male", "male", "male"],
+        2,
+        1,
+      ),
+      20260501,
+    );
+
+    const firstCourtGenders = new Set(courtGenders(result, 0, 0));
+    const secondCourtGenders = new Set(courtGenders(result, 0, 1));
+
+    expect(firstCourtGenders.size).toBe(1);
+    expect(secondCourtGenders.size).toBe(1);
+    expect(result.score.genderPreferencePenalty).toBe(0);
+  });
+
+  it("uses mixed pairs as a fallback for 2F2M courts in same-gender mode", () => {
+    const result = generateMatchup(
+      genderConditions("sameGenderPriority", ["female", "female", "male", "male"], 1, 1),
+      20260501,
+    );
+    const court = result.rounds[0]!.courts[0]!;
+    const genderById = new Map(
+      result.conditions.participants.map((participant) => [participant.id, participant.gender]),
+    );
+
+    expect(court.pairA).not.toBeNull();
+    expect(court.pairB).not.toBeNull();
+    expect(genderById.get(court.pairA!.player1Id)).not.toBe(
+      genderById.get(court.pairA!.player2Id),
+    );
+    expect(genderById.get(court.pairB!.player1Id)).not.toBe(
+      genderById.get(court.pairB!.player2Id),
+    );
+  });
+
+  it("prioritizes mixed doubles pairs in mixed mode", () => {
+    const result = generateMatchup(
+      genderConditions("mixedDoublesPriority", ["female", "female", "male", "male"], 1, 1),
+      20260501,
+    );
+    const court = result.rounds[0]!.courts[0]!;
+    const genderById = new Map(
+      result.conditions.participants.map((participant) => [participant.id, participant.gender]),
+    );
+
+    expect(court.pairA).not.toBeNull();
+    expect(court.pairB).not.toBeNull();
+    expect(genderById.get(court.pairA!.player1Id)).not.toBe(
+      genderById.get(court.pairA!.player2Id),
+    );
+    expect(genderById.get(court.pairB!.player1Id)).not.toBe(
+      genderById.get(court.pairB!.player2Id),
+    );
+    expect(result.score.genderPreferencePenalty).toBe(0);
   });
 });

@@ -25,12 +25,12 @@ function round(roundNumber: number): RoundResult {
         courtNumber: 1,
         isUnused: false,
         pairA: {
-          player1Id: "player-01",
-          player2Id: "player-02",
+          player1Id: "player-02",
+          player2Id: "player-01",
         },
         pairB: {
-          player1Id: "player-03",
-          player2Id: "player-04",
+          player1Id: "player-04",
+          player2Id: "player-03",
         },
       },
       {
@@ -49,6 +49,7 @@ function result(roundCount: number): MatchupResult {
   return {
     conditions: {
       eventName: "週末テニス会",
+      matchupMode: "standard",
       participants: participants(6),
       courtCount: 2,
       roundCount,
@@ -60,6 +61,7 @@ function result(roundCount: number): MatchupResult {
     score: {
       fairnessPenalty: 0,
       consecutiveRestPenalty: 0,
+      genderPreferencePenalty: 0,
       encounterPenalty: 0,
       sameTeammatePenalty: 0,
       sameOpponentPenalty: 0,
@@ -109,7 +111,24 @@ describe("truncateTextToWidth", () => {
 });
 
 describe("buildPdfFileName", () => {
-  it("removes invalid file name characters", () => {
-    expect(buildPdfFileName("春季/練習会:決勝?")).toBe("春季練習会決勝-matchup.pdf");
+  it("includes event name, participant count, court count, and mode label", () => {
+    expect(buildPdfFileName(result(1))).toBe("週末テニス会_6人_2面_通常-matchup.pdf");
+  });
+
+  it("uses short mode labels for gender-aware modes", () => {
+    const sameGenderResult = result(1);
+    sameGenderResult.conditions.matchupMode = "sameGenderPriority";
+    const mixedResult = result(1);
+    mixedResult.conditions.matchupMode = "mixedDoublesPriority";
+
+    expect(buildPdfFileName(sameGenderResult)).toBe("週末テニス会_6人_2面_同性-matchup.pdf");
+    expect(buildPdfFileName(mixedResult)).toBe("週末テニス会_6人_2面_混合-matchup.pdf");
+  });
+
+  it("removes invalid file name characters from the event name", () => {
+    const pdfResult = result(1);
+    pdfResult.conditions.eventName = "春季/練習会:決勝?";
+
+    expect(buildPdfFileName(pdfResult)).toBe("春季練習会決勝_6人_2面_通常-matchup.pdf");
   });
 });

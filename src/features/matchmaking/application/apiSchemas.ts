@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { participantInputSchema } from "../model/schemas";
+import { matchupModeSchema, participantInputSchema } from "../model/schemas";
 
 const apiMatchConditionSchema = z
   .object({
     eventName: z.string().trim().optional(),
+    matchupMode: matchupModeSchema.default("standard"),
     participantCount: z
       .number({ message: "参加人数を入力してください" })
       .int("参加人数は整数で入力してください")
@@ -27,6 +28,17 @@ const apiMatchConditionSchema = z
         code: z.ZodIssueCode.custom,
         path: ["participants"],
         message: "参加者一覧の件数が参加人数と一致していません",
+      });
+    }
+
+    if (
+      value.matchupMode !== "standard" &&
+      value.participants.some((participant) => !participant.gender)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["participants"],
+        message: "同性対決優先・混合対決優先では参加者の性別が必要です",
       });
     }
   });

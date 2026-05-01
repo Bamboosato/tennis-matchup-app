@@ -64,6 +64,34 @@ test("uses the latest typed conditions without requiring blur before generation"
   await expect(page.getByTestId("round-card-1")).toContainText("Court 4");
 });
 
+test("enables gender counts only for gender-aware modes and shows compact gender labels", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByTestId("female-count-input")).toBeDisabled();
+  await expect(page.getByTestId("male-count-input")).toBeDisabled();
+  await expect(page.getByTestId("auto-numbering-breakdown")).toContainText("01～08：参加者");
+
+  await page.getByRole("button", { name: "混合対決優先" }).click();
+  await expect(page.getByTestId("female-count-input")).toBeEnabled();
+  await expect(page.getByTestId("male-count-input")).toBeEnabled();
+
+  await page.getByTestId("participant-count-input").fill("8");
+  await page.getByTestId("female-count-input").fill("4");
+  await page.getByTestId("male-count-input").fill("4");
+  await expect(page.getByTestId("auto-numbering-breakdown")).toContainText(
+    "01～04：女性、05～08：男性",
+  );
+  await page.getByTestId("generate-button").click();
+
+  await expect(page.getByTestId("result-summary")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toContainText("01F");
+  await expect(page.getByTestId("round-card-1")).toContainText("05M");
+
+  await page.getByRole("button", { name: "通常" }).click();
+  await expect(page.getByTestId("female-count-input")).toBeDisabled();
+  await expect(page.getByTestId("male-count-input")).toBeDisabled();
+});
+
 test("re-tapping generate updates the selected seed", async ({ page }) => {
   await page.goto("/");
 

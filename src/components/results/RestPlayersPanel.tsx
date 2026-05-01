@@ -1,4 +1,5 @@
 import type { Participant } from "@/features/matchmaking/model/types";
+import { formatParticipantName } from "@/features/matchmaking/application/formatParticipantName";
 
 type RestPlayersPanelProps = {
   restPlayerIds: string[];
@@ -43,7 +44,7 @@ export function RestPlayersPanel({
                   : "rounded-full bg-white px-3 py-1.5 text-base font-medium text-[var(--color-ink)]"
               }
             >
-              {player.name}
+              {formatParticipantName(player)}
             </li>
           ))}
         </ul>

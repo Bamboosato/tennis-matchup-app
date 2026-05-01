@@ -1,14 +1,11 @@
 import type { CourtAssignment, Participant } from "@/features/matchmaking/model/types";
+import { formatPairParticipantNames } from "@/features/matchmaking/application/formatParticipantName";
 
 type CourtMatchCardProps = {
   court: CourtAssignment;
   participants: Participant[];
   compact?: boolean;
 };
-
-function findName(participants: Participant[], playerId: string): string {
-  return participants.find((participant) => participant.id === playerId)?.name ?? playerId;
-}
 
 export function CourtMatchCard({ court, participants, compact = false }: CourtMatchCardProps) {
   if (court.isUnused || !court.pairA || !court.pairB) {
@@ -40,13 +37,13 @@ export function CourtMatchCard({ court, participants, compact = false }: CourtMa
           <div className="rounded-[0.65rem] bg-white px-2 py-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-muted)]">A</p>
             <p className="mt-0.5 text-[16px] leading-tight font-semibold tracking-[0.02em]">
-              {findName(participants, court.pairA.player1Id)} / {findName(participants, court.pairA.player2Id)}
+              {formatPairParticipantNames(participants, court.pairA.player1Id, court.pairA.player2Id)}
             </p>
           </div>
           <div className="rounded-[0.65rem] bg-white px-2 py-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-muted)]">B</p>
             <p className="mt-0.5 text-[16px] leading-tight font-semibold tracking-[0.02em]">
-              {findName(participants, court.pairB.player1Id)} / {findName(participants, court.pairB.player2Id)}
+              {formatPairParticipantNames(participants, court.pairB.player1Id, court.pairB.player2Id)}
             </p>
           </div>
         </div>
@@ -65,7 +62,7 @@ export function CourtMatchCard({ court, participants, compact = false }: CourtMa
             Pair A
           </p>
           <p className="mt-2 text-base font-semibold">
-            {findName(participants, court.pairA.player1Id)} / {findName(participants, court.pairA.player2Id)}
+            {formatPairParticipantNames(participants, court.pairA.player1Id, court.pairA.player2Id)}
           </p>
         </div>
         <div className="rounded-2xl bg-white px-4 py-3">
@@ -73,7 +70,7 @@ export function CourtMatchCard({ court, participants, compact = false }: CourtMa
             Pair B
           </p>
           <p className="mt-2 text-base font-semibold">
-            {findName(participants, court.pairB.player1Id)} / {findName(participants, court.pairB.player2Id)}
+            {formatPairParticipantNames(participants, court.pairB.player1Id, court.pairB.player2Id)}
           </p>
         </div>
       </div>

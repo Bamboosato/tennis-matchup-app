@@ -1,4 +1,5 @@
 import type { Participant, PlayerStats, ResultScore } from "@/features/matchmaking/model/types";
+import { formatParticipantName } from "@/features/matchmaking/application/formatParticipantName";
 
 type PlayerStatsTableProps = {
   participants: Participant[];
@@ -23,6 +24,9 @@ export function PlayerStatsTable({
         <div className="grid grid-cols-2 gap-2 text-base text-[var(--color-muted)] sm:text-right">
           <span>休憩の偏り: {score.fairnessPenalty}</span>
           <span>連続休憩: {score.consecutiveRestPenalty}</span>
+          {score.genderPreferencePenalty > 0 ? (
+            <span>モード不一致: {score.genderPreferencePenalty}</span>
+          ) : null}
           <span>顔合わせ重複: {score.encounterPenalty}</span>
           <span>総合スコア: {score.totalScore}</span>
         </div>
@@ -46,7 +50,9 @@ export function PlayerStatsTable({
                 className="grid gap-3 bg-white px-4 py-4 text-base md:grid-cols-[1.4fr_repeat(4,minmax(0,1fr))]"
               >
                 <div>
-                  <p className="font-semibold">{participant?.name ?? stat.playerId}</p>
+                  <p className="font-semibold">
+                    {participant ? formatParticipantName(participant) : stat.playerId}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[var(--color-muted)] md:hidden">出場回数</p>

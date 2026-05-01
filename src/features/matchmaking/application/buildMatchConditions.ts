@@ -13,11 +13,21 @@ export function buildMatchConditions(input: MatchConditionInput): MatchCondition
 
   return {
     eventName: parsed.eventName,
-    participants: parsed.participants.map((participant, index) => ({
-      id: participant.id,
-      name: participant.name,
-      index,
-    })),
+    matchupMode: parsed.matchupMode,
+    participants: parsed.participants.map((participant, index) => {
+      const baseParticipant = {
+        id: participant.id,
+        name: participant.name,
+        index,
+      };
+
+      return parsed.matchupMode === "standard"
+        ? baseParticipant
+        : {
+            ...baseParticipant,
+            gender: participant.gender,
+          };
+    }),
     courtCount: parsed.courtCount,
     roundCount: parsed.roundCount,
     playersPerCourt: 4,

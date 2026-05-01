@@ -1,9 +1,11 @@
 import type {
   CourtAssignment,
+  MatchupMode,
   MatchupResult,
   Participant,
   RoundResult,
 } from "../../model/types";
+import { formatPairParticipantNames, formatParticipantName } from "../formatParticipantName";
 
 export const PDF_ROUNDS_PER_PAGE = 12;
 const PDF_TYPOGRAPHY_DENSITY_ROUNDS_CAP = 10;
@@ -39,35 +41,26 @@ export type PdfDocumentModel = {
 };
 
 function createParticipantNameMap(participants: Participant[]) {
-  return new Map(participants.map((participant) => [participant.id, participant.name]));
+  return new Map(
+    participants.map((participant) => [participant.id, formatParticipantName(participant)]),
+  );
 }
 
 function createParticipantOrderMap(participants: Participant[]) {
   return new Map(participants.map((participant) => [participant.id, participant.index]));
 }
 
-function formatPairName(
-  player1Id: string,
-  player2Id: string,
-  participantNameById: Map<string, string>,
-) {
-  const player1Name = participantNameById.get(player1Id) ?? player1Id;
-  const player2Name = participantNameById.get(player2Id) ?? player2Id;
-
-  return `${player1Name} / ${player2Name}`;
-}
-
 function formatCourtCell(
   court: CourtAssignment,
-  participantNameById: Map<string, string>,
+  participants: Participant[],
 ) {
   if (court.isUnused || !court.pairA || !court.pairB) {
     return "未使用";
   }
 
   return [
-    formatPairName(court.pairA.player1Id, court.pairA.player2Id, participantNameById),
-    formatPairName(court.pairB.player1Id, court.pairB.player2Id, participantNameById),
+    formatPairParticipantNames(participants, court.pairA.player1Id, court.pairA.player2Id),
+    formatPairParticipantNames(participants, court.pairB.player1Id, court.pairB.player2Id),
   ].join("\n");
 }
 
@@ -91,12 +84,15 @@ function formatRestCell(
 
 function buildPdfRow(
   round: RoundResult,
+  participants: Participant[],
   participantNameById: Map<string, string>,
   participantOrderById: Map<string, number>,
 ): PdfTableRow {
   return {
     roundLabel: String(round.roundNumber),
-    courtCells: round.courts.map((court) => formatCourtCell(court, participantNameById)),
+    courtCells: round.courts.map((court) =>
+      formatCourtCell(court, participants),
+    ),
     restCell: formatRestCell(round.restPlayerIds, participantNameById, participantOrderById),
   };
 }
@@ -139,7 +135,14 @@ export function buildPdfDocumentModel(result: MatchupResult): PdfDocumentModel {
       pageNumber: pages.length + 1,
       rows: result.rounds
         .slice(offset, offset + PDF_ROUNDS_PER_PAGE)
-        .map((round) => buildPdfRow(round, participantNameById, participantOrderById)),
+        .map((round) =>
+          buildPdfRow(
+            round,
+            result.conditions.participants,
+            participantNameById,
+            participantOrderById,
+          ),
+        ),
     });
   }
 
@@ -190,8 +193,25 @@ export function truncateTextToWidth(
   return `${chars.slice(0, low).join("")}${ellipsis}`;
 }
 
-export function buildPdfFileName(eventName: string) {
-  const sanitized = eventName.replace(/[\\/:*?"<>|]/g, "").trim();
+function matchupModeFileNameLabel(matchupMode: MatchupMode): string {
+  if (matchupMode === "sameGenderPriority") {
+    return "同性";
+  }
 
-  return `${sanitized || "tennis-matchup"}-matchup.pdf`;
+  if (matchupMode === "mixedDoublesPriority") {
+    return "混合";
+  }
+
+  return "通常";
+}
+
+export function buildPdfFileName(result: MatchupResult) {
+  const eventName = result.conditions.eventName || "テニス対戦組合せApp";
+  const sanitized = eventName.replace(/[\\/:*?"<>|]/g, "").trim();
+  const prefix = sanitized || "tennis-matchup";
+  const participantCount = result.conditions.participants.length;
+  const courtCount = result.conditions.courtCount;
+  const modeLabel = matchupModeFileNameLabel(result.conditions.matchupMode);
+
+  return `${prefix}_${participantCount}人_${courtCount}面_${modeLabel}-matchup.pdf`;
 }

@@ -16,6 +16,7 @@ import {
   createAutoMatchConditionInput,
   restoreSharedMatchupFromSearch,
 } from "@/features/matchmaking/application/shareMatchup";
+import type { MatchConditionInput, MatchupMode } from "@/features/matchmaking/model/types";
 import { useMatchupGeneration } from "@/hooks/useMatchupGeneration";
 import { useMatchupPdfExport } from "@/hooks/useMatchupPdfExport";
 import { usePrintPreview } from "@/hooks/usePrintPreview";
@@ -34,6 +35,34 @@ function parseDraftCount(value: string): number | null {
   }
 
   return Math.trunc(parsed);
+}
+
+function defaultGenderCounts(participantCount: number) {
+  const femaleCount = Math.floor(participantCount / 2);
+
+  return {
+    femaleCount,
+    maleCount: participantCount - femaleCount,
+  };
+}
+
+function countInputGenders(input: MatchConditionInput | undefined, participantCount: number) {
+  if (!input || !input.matchupMode || input.matchupMode === "standard") {
+    return defaultGenderCounts(participantCount);
+  }
+
+  return input.participants.reduce(
+    (counts, participant) => {
+      if (participant.gender === "female") {
+        counts.femaleCount += 1;
+      } else if (participant.gender === "male") {
+        counts.maleCount += 1;
+      }
+
+      return counts;
+    },
+    { femaleCount: 0, maleCount: 0 },
+  );
 }
 
 export default function HomePage() {
@@ -72,7 +101,18 @@ export default function HomePage() {
   const [participantCount, setParticipantCount] = useState(
     initialSharedLoad.restored?.input.participantCount ?? 8,
   );
+  const initialGenderCounts = countInputGenders(
+    initialSharedLoad.restored?.input,
+    initialSharedLoad.restored?.input.participantCount ?? 8,
+  );
+  const [matchupMode, setMatchupMode] = useState<MatchupMode>(
+    initialSharedLoad.restored?.input.matchupMode ?? "standard",
+  );
   const [participantCountInput, setParticipantCountInput] = useState(String(participantCount));
+  const [femaleCount, setFemaleCount] = useState(initialGenderCounts.femaleCount);
+  const [femaleCountInput, setFemaleCountInput] = useState(String(femaleCount));
+  const [maleCount, setMaleCount] = useState(initialGenderCounts.maleCount);
+  const [maleCountInput, setMaleCountInput] = useState(String(maleCount));
   const [courtCount, setCourtCount] = useState(initialSharedLoad.restored?.input.courtCount ?? 2);
   const [courtCountInput, setCourtCountInput] = useState(String(courtCount));
   const [roundCount, setRoundCount] = useState(initialSharedLoad.restored?.input.roundCount ?? 4);
@@ -129,12 +169,63 @@ export default function HomePage() {
     }
 
     const safeCount = Math.max(4, parsed);
+    const wasBalanced = femaleCount + maleCount === participantCount;
 
     setParticipantCount(safeCount);
+
+    if (matchupMode !== "standard" && wasBalanced) {
+      const nextMaleCount = Math.max(0, safeCount - femaleCount);
+
+      setMaleCount(nextMaleCount);
+      setMaleCountInput(String(nextMaleCount));
+    }
   }
 
   function commitParticipantCount() {
     setParticipantCountInput(String(participantCount));
+  }
+
+  function handleMatchupModeChange(value: MatchupMode) {
+    setMatchupMode(value);
+
+    if (value !== "standard" && femaleCount + maleCount !== participantCount) {
+      const genderCounts = defaultGenderCounts(participantCount);
+
+      setFemaleCount(genderCounts.femaleCount);
+      setFemaleCountInput(String(genderCounts.femaleCount));
+      setMaleCount(genderCounts.maleCount);
+      setMaleCountInput(String(genderCounts.maleCount));
+    }
+  }
+
+  function handleFemaleCountChange(value: string) {
+    setFemaleCountInput(value);
+    const parsed = parseDraftCount(value);
+
+    if (parsed === null) {
+      return;
+    }
+
+    setFemaleCount(Math.max(0, parsed));
+  }
+
+  function commitFemaleCount() {
+    setFemaleCountInput(String(femaleCount));
+  }
+
+  function handleMaleCountChange(value: string) {
+    setMaleCountInput(value);
+    const parsed = parseDraftCount(value);
+
+    if (parsed === null) {
+      return;
+    }
+
+    setMaleCount(Math.max(0, parsed));
+  }
+
+  function commitMaleCount() {
+    setMaleCountInput(String(maleCount));
   }
 
   function handleCourtCountChange(value: string) {
@@ -174,7 +265,10 @@ export default function HomePage() {
   function currentInput() {
     return createAutoMatchConditionInput({
       eventName,
+      matchupMode,
       participantCount,
+      femaleCount,
+      maleCount,
       courtCount,
       roundCount,
     });
@@ -250,16 +344,24 @@ export default function HomePage() {
       <main className="grid gap-6">
         <ConditionForm
           eventName={eventName}
+          matchupMode={matchupMode}
           participantCount={participantCount}
           participantCountInput={participantCountInput}
+          femaleCountInput={femaleCountInput}
+          maleCountInput={maleCountInput}
           courtCount={courtCount}
           courtCountInput={courtCountInput}
           roundCountInput={roundCountInput}
           isGenerating={isGenerating}
           errorMessage={errorMessage}
           onEventNameChange={setEventName}
+          onMatchupModeChange={handleMatchupModeChange}
           onParticipantCountChange={handleParticipantCountChange}
           onParticipantCountCommit={commitParticipantCount}
+          onFemaleCountChange={handleFemaleCountChange}
+          onFemaleCountCommit={commitFemaleCount}
+          onMaleCountChange={handleMaleCountChange}
+          onMaleCountCommit={commitMaleCount}
           onCourtCountChange={handleCourtCountChange}
           onCourtCountCommit={commitCourtCount}
           onRoundCountChange={handleRoundCountChange}
