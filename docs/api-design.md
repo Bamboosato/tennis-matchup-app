@@ -197,6 +197,7 @@ Date.now()
   "data": {
     "conditions": {
       "eventName": "日曜練習",
+      "matchupMode": "standard",
       "participants": [
         { "id": "p001", "name": "参加者1", "index": 0 },
         { "id": "p002", "name": "参加者2", "index": 1 }
@@ -233,6 +234,7 @@ Date.now()
     "score": {
       "fairnessPenalty": 0,
       "consecutiveRestPenalty": 0,
+      "genderPreferencePenalty": 0,
       "encounterPenalty": 10,
       "sameTeammatePenalty": 2,
       "sameOpponentPenalty": 3,
@@ -390,6 +392,23 @@ seed 未指定で replay を呼んだ場合:
 }
 ```
 
+性別優先モードで `participants[].gender` が不足している場合:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "入力内容を確認してください",
+    "details": [
+      {
+        "path": "participants",
+        "message": "同性対決優先・混合対決優先では参加者の性別が必要です"
+      }
+    ]
+  }
+}
+```
+
 ## 9. Vercel 環境設計
 
 ### 9.1 API 提供元アプリ
@@ -485,6 +504,8 @@ request
 - 再現 API が指定 seed で同じ組合せを返すこと。
 - 認証ヘッダーが正しく検証されること。
 - seed 未指定の通常生成で API 側が seed を補完すること。
+- `matchupMode` 未指定時に `standard` として扱うこと。
+- `sameGenderPriority` / `mixedDoublesPriority` が generate / replay の両方で同じ条件として扱われること。
 
 非機能観点:
 
@@ -515,6 +536,8 @@ UI 観点:
 | N-003 | generate | seed 指定時に同じ base seed から候補探索されること |
 | N-004 | replay | generate の結果 seed を使って同じ組合せを再現できること |
 | N-005 | replay | 開催名未指定でも生成できること |
+| N-006 | both | `matchupMode` 未指定時に `standard` として扱うこと |
+| N-007 | both | `sameGenderPriority` / `mixedDoublesPriority` と参加者性別を指定して生成できること |
 
 ### 11.3 異常系
 
@@ -526,6 +549,7 @@ UI 観点:
 | E-004 | both | 参加者数不一致で `422` を返すこと |
 | E-005 | replay | seed 未指定で `422` を返すこと |
 | E-006 | both | 許可外メソッドで `405` を返すこと |
+| E-007 | both | 性別優先モードで参加者性別不足の場合に `422` を返すこと |
 
 ### 11.4 境界値
 

@@ -518,7 +518,33 @@ POST /api/v1/matchups/generate
 POST /api/v1/matchups/replay
 ```
 
-### 11.2 認証
+### 11.2 対戦モード入力
+
+`generate` / `replay` の request body では、画面の対戦モードと同じ値を `matchupMode` で指定できる。
+
+| 画面表示 | API値 | 意味 |
+| --- | --- | --- |
+| 通常 | `standard` | 性別条件を優先しない |
+| 同性対決優先 | `sameGenderPriority` | 同性同士の対戦を優先 |
+| 混合対決優先 | `mixedDoublesPriority` | 男女混合の対戦を優先 |
+
+未指定時は後方互換のため `standard` として扱う。
+
+`sameGenderPriority` / `mixedDoublesPriority` を指定する場合は、各 `participants[]` に `gender` が必要。
+
+```json
+{
+  "matchupMode": "mixedDoublesPriority",
+  "participants": [
+    { "id": "p1", "name": "Player 1", "gender": "female" },
+    { "id": "p2", "name": "Player 2", "gender": "male" }
+  ]
+}
+```
+
+`gender` は `female` / `male` のいずれかとする。`standard` では `gender` なしでも利用できる。
+
+### 11.3 認証
 
 ```http
 Authorization: Bearer <API_KEY>
@@ -541,14 +567,14 @@ Authorization: Bearer <API_KEY>
 12. apiRequestLogs と auditLogs を必要に応じて記録
 ```
 
-### 11.3 Scopes
+### 11.4 Scopes
 
 | Scope | 許可するAPI |
 | --- | --- |
 | `matchups:generate` | `POST /api/v1/matchups/generate` |
 | `matchups:replay` | `POST /api/v1/matchups/replay` |
 
-### 11.4 Rate Limit
+### 11.5 Rate Limit
 
 初期値:
 
@@ -568,7 +594,7 @@ MVPでは少数アカウント前提のため Firestore で開始する。
 
 将来、アクセス量が増える場合は Vercel KV / Redis 系へ切り出す。
 
-### 11.5 Response meta
+### 11.6 Response meta
 
 成功時:
 
@@ -717,6 +743,7 @@ Firestore 接続、認証情報、読み書きで障害が起きた場合、Publ
 - アカウント追加、登録、更新、再発行、削除ができること。
 - Public API が APIキー、scope、rate limit を判定できること。
 - `generate` と `replay` が既存ロジックと同じ結果を返すこと。
+- Public API で画面と同じ対戦モードを指定でき、未指定時は通常扱いになること。
 
 非機能観点:
 
@@ -733,6 +760,7 @@ Firestore 接続、認証情報、読み書きで障害が起きた場合、Publ
 - soft delete 後のアカウントが一覧から消え、API利用できないこと。
 - 監査ログに操作種別、対象、結果、requestId が残ること。
 - API利用ログに participantCount, courtCount, roundCount, seed は残り、参加者名は残らないこと。
+- 性別優先モードでは participant gender 不足を検証エラーにすること。
 
 UI観点:
 
@@ -756,6 +784,8 @@ UI観点:
 | N-007 | generate | 有効キーと scope で生成APIを呼べる |
 | N-008 | replay | 有効キーと scope で再現APIを呼べる |
 | N-009 | ログ参照 | 管理画面で監査ログを確認できる |
+| N-010 | Public API | `matchupMode` 未指定時に `standard` として生成できる |
+| N-011 | Public API | `sameGenderPriority` / `mixedDoublesPriority` を指定して生成・再現できる |
 
 ### 16.3 異常系
 
@@ -770,6 +800,7 @@ UI観点:
 | E-007 | Public API | rate limit 超過で `429` を返す |
 | E-008 | Public API | Firestore障害時に `503` を返す |
 | E-009 | Public API | disabled/deleted アカウントを拒否する |
+| E-010 | Public API | 性別優先モードで participant gender 不足なら `422` を返す |
 
 ### 16.4 境界値
 
