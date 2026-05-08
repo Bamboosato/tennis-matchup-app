@@ -54,6 +54,12 @@ describe("matchup API schemas", () => {
     expect(replayMatchupApiSchema.safeParse(input({ seed: 123 })).success).toBe(true);
   });
 
+  it("defaults matchupMode to standard when omitted", () => {
+    const parsed = generateMatchupApiSchema.parse(input());
+
+    expect(parsed.matchupMode).toBe("standard");
+  });
+
   it("accepts gender-aware modes when each participant has gender", () => {
     const parsed = generateMatchupApiSchema.safeParse(
       input({
@@ -62,6 +68,22 @@ describe("matchup API schemas", () => {
           id: `p${index + 1}`,
           name: `Player ${index + 1}`,
           gender: index < 4 ? "female" : "male",
+        })),
+      }),
+    );
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("accepts gender-aware modes for replay when each participant has gender", () => {
+    const parsed = replayMatchupApiSchema.safeParse(
+      input({
+        matchupMode: "sameGenderPriority",
+        seed: 123,
+        participants: Array.from({ length: 8 }, (_, index) => ({
+          id: `p${index + 1}`,
+          name: `Player ${index + 1}`,
+          gender: index % 2 === 0 ? "female" : "male",
         })),
       }),
     );

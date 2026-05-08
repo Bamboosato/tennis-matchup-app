@@ -70,6 +70,7 @@
 - scope は `matchups:generate` / `matchups:replay` を個別に許可
 - rate limit はアカウント単位で 1分あたりの回数を設定
 - 公開 API は `Authorization: Bearer <API_KEY>` で認証
+- API入力では画面と同じ対戦モードを `matchupMode` で指定可能。未指定時は通常扱い
 
 | Method | Path | 用途 |
 | --- | --- | --- |
@@ -83,6 +84,16 @@ API入力上限は以下です。
 | 参加人数 | 30 |
 | 面数 | 8 |
 | 回数 | 20 |
+
+対戦モードの API 値は以下です。
+
+| 画面表示 | API値 |
+| --- | --- |
+| 通常 | `standard` |
+| 同性対決優先 | `sameGenderPriority` |
+| 混合対決優先 | `mixedDoublesPriority` |
+
+`sameGenderPriority` / `mixedDoublesPriority` では、各参加者に `gender: "female" | "male"` が必要です。
 
 詳細仕様は [docs/api-design.md](docs/api-design.md) と [docs/api-admin-design.md](docs/api-admin-design.md) を参照してください。
 
@@ -163,6 +174,7 @@ npm run test:e2e
 - 参加人数に対して使用可能なコート数が正しく計算されること
 - 休憩人数、出場人数、ラウンド数が条件どおりに扱われること
 - API入力上限、scope、rate limit、有効/無効状態が正しく判定されること
+- 対戦モード未指定時は通常扱い、性別優先モードでは参加者性別必須として扱われること
 
 ### UI観点
 
