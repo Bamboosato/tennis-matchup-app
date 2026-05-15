@@ -312,7 +312,7 @@ export default function HomePage() {
 
   return (
     <ResponsiveShell>
-      <header className="mb-5">
+      <header className="relative z-30 mb-5">
         <section className="relative flex min-h-[88px] flex-col justify-center rounded-[2rem] border border-white/65 bg-[linear-gradient(135deg,rgba(244,112,66,0.22),rgba(255,255,255,0.94))] px-5 py-4 shadow-[0_22px_70px_rgba(53,40,19,0.12)] sm:px-6">
           <div className="absolute right-5 top-1/2 hidden -translate-y-1/2 items-center gap-3 lg:flex">
             {canPromptInstall && !isInstalled ? (
