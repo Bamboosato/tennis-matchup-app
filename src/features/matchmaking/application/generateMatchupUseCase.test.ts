@@ -41,4 +41,34 @@ describe("generateMatchupUseCase", () => {
     expect(right.score).toEqual(left.score);
     expect(right.rounds).toEqual(left.rounds);
   });
+
+  it("does not use gender for standard mode scoring or pairing", () => {
+    const withoutGender = generateMatchupUseCase(input, 2468);
+    const withGender = generateMatchupUseCase(
+      {
+        ...input,
+        matchupMode: "standard",
+        participants: input.participants.map((participant, index) => ({
+          ...participant,
+          gender: index % 2 === 0 ? "female" : "male",
+        })),
+      },
+      2468,
+    );
+
+    expect(withGender.conditions.participants.map((participant) => participant.gender)).toEqual([
+      "female",
+      "male",
+      "female",
+      "male",
+      "female",
+      "male",
+      "female",
+      "male",
+    ]);
+    expect(withGender.seed).toBe(withoutGender.seed);
+    expect(withGender.score).toEqual(withoutGender.score);
+    expect(withGender.rounds).toEqual(withoutGender.rounds);
+    expect(withGender.stats).toEqual(withoutGender.stats);
+  });
 });

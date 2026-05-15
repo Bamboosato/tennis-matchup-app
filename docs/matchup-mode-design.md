@@ -72,7 +72,7 @@ type MatchupMode = "standard" | "sameGenderPriority" | "mixedDoublesPriority";
 type ParticipantGender = "male" | "female";
 ```
 
-通常モードでは participant の gender は不要とする。同性対決優先・混合対決優先では、UI の男性人数・女性人数から自動採番参加者へ性別を付与する。
+通常モードでは participant の gender は不要とする。API 入力で gender が指定された場合はレスポンス条件へ保持するが、通常モードの組合せ評価には使わない。同性対決優先・混合対決優先では、UI の男性人数・女性人数から自動採番参加者へ性別を付与する。
 
 性別人数から自動採番する場合は、女性を先に割り当てる。
 
