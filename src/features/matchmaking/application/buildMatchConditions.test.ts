@@ -45,7 +45,31 @@ describe("buildMatchConditions", () => {
     ).toThrow(ZodError);
   });
 
-  it("keeps gender only for gender-aware modes", () => {
+  it("keeps provided gender in standard mode conditions", () => {
+    const result = buildMatchConditions({
+      eventName: "standard gender",
+      matchupMode: "standard",
+      participantCount: 4,
+      courtCount: 1,
+      roundCount: 1,
+      participants: [
+        { id: "p1", name: "01", gender: "female" },
+        { id: "p2", name: "02" },
+        { id: "p3", name: "03", gender: "male" },
+        { id: "p4", name: "04" },
+      ],
+    });
+
+    expect(result.matchupMode).toBe("standard");
+    expect(result.participants).toEqual([
+      { id: "p1", name: "01", index: 0, gender: "female" },
+      { id: "p2", name: "02", index: 1 },
+      { id: "p3", name: "03", index: 2, gender: "male" },
+      { id: "p4", name: "04", index: 3 },
+    ]);
+  });
+
+  it("keeps gender for gender-aware modes", () => {
     const result = buildMatchConditions({
       eventName: "gender",
       matchupMode: "mixedDoublesPriority",

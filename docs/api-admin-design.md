@@ -542,7 +542,7 @@ POST /api/v1/matchups/replay
 }
 ```
 
-`gender` は `female` / `male` のいずれかとする。`standard` では `gender` なしでも利用できる。
+`gender` は `female` / `male` のいずれかとする。`standard` では `gender` なしでも利用できる。`standard` で `gender` を指定した場合は、レスポンスの `conditions.participants[]` に保持するが、組合せ評価には使わない。
 
 ### 11.3 認証
 

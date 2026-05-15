@@ -21,12 +21,12 @@ export function buildMatchConditions(input: MatchConditionInput): MatchCondition
         index,
       };
 
-      return parsed.matchupMode === "standard"
-        ? baseParticipant
-        : {
+      return participant.gender
+        ? {
             ...baseParticipant,
             gender: participant.gender,
-          };
+          }
+        : baseParticipant;
     }),
     courtCount: parsed.courtCount,
     roundCount: parsed.roundCount,

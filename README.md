@@ -93,7 +93,7 @@ API入力上限は以下です。
 | 同性対決優先 | `sameGenderPriority` |
 | 混合対決優先 | `mixedDoublesPriority` |
 
-`sameGenderPriority` / `mixedDoublesPriority` では、各参加者に `gender: "female" | "male"` が必要です。
+`sameGenderPriority` / `mixedDoublesPriority` では、各参加者に `gender: "female" | "male"` が必要です。`standard` では任意で、指定した場合は API レスポンスの `conditions.participants[]` に保持されます。
 
 詳細仕様は [docs/api-design.md](docs/api-design.md) と [docs/api-admin-design.md](docs/api-admin-design.md) を参照してください。
 
