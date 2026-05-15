@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test("shows install banner", async ({ page }) => {
+test("keeps the app share action in the header without a standalone banner", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByTestId("install-prompt-banner")).toBeVisible();
+  await expect(page.getByTestId("install-prompt-banner")).toHaveCount(0);
+  await expect(page.getByTestId("open-share-dialog-button")).toBeVisible();
 });
 
 test("serves a valid web manifest", async ({ request }) => {

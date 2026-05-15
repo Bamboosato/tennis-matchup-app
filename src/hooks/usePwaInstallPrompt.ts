@@ -7,23 +7,7 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-function getInstallHint() {
-  if (typeof window === "undefined") {
-    return "対応ブラウザではメニューから追加できます。";
-  }
-
-  const userAgent = window.navigator.userAgent;
-  const isAppleMobile =
-    /iPhone|iPad|iPod/i.test(userAgent) ||
-    (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
-
-  return isAppleMobile
-    ? "ホーム画面へのアイコン追加は共有メニューからできます。"
-    : "対応ブラウザではメニューから追加できます。";
-}
-
 export function usePwaInstallPrompt() {
-  const [installHint] = useState(getInstallHint);
   const [isInstalled, setIsInstalled] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -75,7 +59,6 @@ export function usePwaInstallPrompt() {
 
   return {
     canPromptInstall: Boolean(deferredPrompt),
-    installHint,
     isInstalled,
     promptInstall,
   };
