@@ -1,12 +1,12 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Settings } from "lucide-react";
 import { ConditionForm } from "@/components/conditions/ConditionForm";
 import { ResponsiveShell } from "@/components/layout/ResponsiveShell";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
-import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
 import { AppShareDialog } from "@/components/share/AppShareDialog";
 import { ResultShareDialog } from "@/components/share/ResultShareDialog";
 import { PlayerStatsTable } from "@/components/results/PlayerStatsTable";
@@ -141,7 +141,7 @@ export default function HomePage() {
   const { generate, regenerate } = useMatchupGeneration();
   const { openPrintPreview } = usePrintPreview();
   const { exportPdf, isExportingPdf, pdfErrorMessage, clearPdfError } = useMatchupPdfExport();
-  const { canPromptInstall, installHint, isInstalled, promptInstall } = usePwaInstallPrompt();
+  const { canPromptInstall, isInstalled, promptInstall } = usePwaInstallPrompt();
 
   useEffect(() => {
     setInstalled(isInstalled);
@@ -312,33 +312,62 @@ export default function HomePage() {
 
   return (
     <ResponsiveShell>
-      <header className="mb-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="relative flex min-h-[110px] flex-col justify-center rounded-[2rem] border border-white/65 bg-[linear-gradient(135deg,rgba(244,112,66,0.22),rgba(255,255,255,0.94))] px-5 py-4 shadow-[0_22px_70px_rgba(53,40,19,0.12)] sm:min-h-[116px] sm:px-6 sm:py-4">
-          <Link
-            href="/admin"
-            aria-label="管理画面を開く"
-            title="管理画面"
-            className="absolute right-5 top-4 hidden h-11 w-11 items-center justify-center rounded-full border border-[var(--color-line)] bg-white text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition hover:border-[var(--color-accent)] lg:inline-flex"
-          >
-            <Settings size={20} />
-          </Link>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-ink)]">
-            Tennis Matchup App
-          </p>
-          <p className="mt-3 text-base leading-7 text-[var(--color-muted)]">
-            ダブルスの対戦表と休憩者をまとめて作成。
-          </p>
+      <header className="mb-5">
+        <section className="relative flex min-h-[88px] flex-col justify-center rounded-[2rem] border border-white/65 bg-[linear-gradient(135deg,rgba(244,112,66,0.22),rgba(255,255,255,0.94))] px-5 py-4 shadow-[0_22px_70px_rgba(53,40,19,0.12)] sm:px-6">
+          <div className="absolute right-5 top-1/2 hidden -translate-y-1/2 items-center gap-3 lg:flex">
+            {canPromptInstall && !isInstalled ? (
+              <HoverTooltip
+                text="ホーム画面に追加して、アプリのようにすぐ開けるようにします。"
+                placement="bottom"
+              >
+                <button
+                  data-testid="install-app-button"
+                  type="button"
+                  onClick={() => void promptInstall()}
+                  className="h-11 min-w-[148px] whitespace-nowrap rounded-full bg-[var(--color-accent)] px-5 text-base font-semibold text-white shadow-[0_10px_24px_rgba(240,106,60,0.22)] transition"
+                >
+                  ホーム画面追加
+                </button>
+              </HoverTooltip>
+            ) : null}
+            <HoverTooltip text="アプリURLを共有、コピー、QRコード表示できます。" placement="bottom">
+              <button
+                data-testid="open-share-dialog-button"
+                type="button"
+                onClick={() => setAppShareDialogOpen(true)}
+                className="h-11 min-w-[92px] whitespace-nowrap rounded-full border border-[var(--color-line)] bg-white px-5 text-base font-semibold text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition hover:border-[var(--color-accent)]"
+              >
+                共有
+              </button>
+            </HoverTooltip>
+            <Link
+              href="/admin"
+              aria-label="管理画面を開く"
+              title="管理画面"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--color-line)] bg-white text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition hover:border-[var(--color-accent)]"
+            >
+              <Settings size={20} />
+            </Link>
+          </div>
+          <div className="flex items-center gap-4">
+            <Image
+              src="/icons/icon-192.png"
+              alt=""
+              width={56}
+              height={56}
+              className="h-14 w-14 shrink-0 rounded-2xl shadow-[0_10px_22px_rgba(53,40,19,0.14)]"
+              loading="eager"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-ink)]">
+                Tennis Matchup App
+              </p>
+              <p className="mt-2 text-base leading-7 text-[var(--color-muted)]">
+                ダブルスの対戦表と休憩者をまとめて作成。
+              </p>
+            </div>
+          </div>
         </section>
-
-        <div className="grid gap-3">
-          <InstallPromptBanner
-            canPromptInstall={canPromptInstall}
-            installHint={installHint}
-            isInstalled={isInstalled}
-            onPromptInstall={promptInstall}
-            onOpenShareDialog={() => setAppShareDialogOpen(true)}
-          />
-        </div>
       </header>
 
       <main className="grid gap-6">
