@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { generateMatchup } from "../domain/generateMatchup";
+import { MATCH_CONDITION_LIMITS } from "../model/limits";
 import type { MatchConditionInput, MatchupMode, MatchupResult } from "../model/types";
 import { matchupModeSchema } from "../model/schemas";
 import { buildMatchConditions } from "./buildMatchConditions";
@@ -15,15 +16,18 @@ const legacySharedMatchQuerySchema = z.object({
   participants: z.coerce
     .number({ message: "参加人数を読み込めませんでした" })
     .int("参加人数を読み込めませんでした")
-    .min(4, "参加人数を読み込めませんでした"),
+    .min(MATCH_CONDITION_LIMITS.participantCount.min, "参加人数を読み込めませんでした")
+    .max(MATCH_CONDITION_LIMITS.participantCount.max, "参加人数を読み込めませんでした"),
   courts: z.coerce
     .number({ message: "コート数を読み込めませんでした" })
     .int("コート数を読み込めませんでした")
-    .min(1, "コート数を読み込めませんでした"),
+    .min(MATCH_CONDITION_LIMITS.courtCount.min, "コート数を読み込めませんでした")
+    .max(MATCH_CONDITION_LIMITS.courtCount.max, "コート数を読み込めませんでした"),
   rounds: z.coerce
     .number({ message: "実施回数を読み込めませんでした" })
     .int("実施回数を読み込めませんでした")
-    .min(1, "実施回数を読み込めませんでした"),
+    .min(MATCH_CONDITION_LIMITS.roundCount.min, "実施回数を読み込めませんでした")
+    .max(MATCH_CONDITION_LIMITS.roundCount.max, "実施回数を読み込めませんでした"),
   seed: z.coerce
     .number({ message: "採用シードを読み込めませんでした" })
     .int("採用シードを読み込めませんでした")
@@ -37,12 +41,12 @@ const sharedMatchQuerySchema = legacySharedMatchQuerySchema
     female: z.coerce
       .number({ message: "女性人数を読み込めませんでした" })
       .int("女性人数を読み込めませんでした")
-      .min(0, "女性人数を読み込めませんでした")
+      .min(MATCH_CONDITION_LIMITS.genderCount.min, "女性人数を読み込めませんでした")
       .optional(),
     male: z.coerce
       .number({ message: "男性人数を読み込めませんでした" })
       .int("男性人数を読み込めませんでした")
-      .min(0, "男性人数を読み込めませんでした")
+      .min(MATCH_CONDITION_LIMITS.genderCount.min, "男性人数を読み込めませんでした")
       .optional(),
   })
   .superRefine((value, ctx) => {

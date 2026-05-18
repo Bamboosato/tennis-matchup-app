@@ -16,6 +16,7 @@ import {
   createAutoMatchConditionInput,
   restoreSharedMatchupFromSearch,
 } from "@/features/matchmaking/application/shareMatchup";
+import { MATCH_CONDITION_LIMITS } from "@/features/matchmaking/model/limits";
 import type { MatchConditionInput, MatchupMode } from "@/features/matchmaking/model/types";
 import { useMatchupGeneration } from "@/hooks/useMatchupGeneration";
 import { useMatchupPdfExport } from "@/hooks/useMatchupPdfExport";
@@ -35,6 +36,10 @@ function parseDraftCount(value: string): number | null {
   }
 
   return Math.trunc(parsed);
+}
+
+function clampCount(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 function defaultGenderCounts(participantCount: number) {
@@ -160,17 +165,15 @@ export default function HomePage() {
     }
   }, [initialSharedLoad, setConditions, setErrorMessage, setResult]);
 
-  function handleParticipantCountChange(value: string) {
-    setParticipantCountInput(value);
-    const parsed = parseDraftCount(value);
-
-    if (parsed === null) {
-      return;
-    }
-
-    const safeCount = Math.max(4, parsed);
+  function applyParticipantCount(nextCount: number, inputValue = String(nextCount)) {
+    const safeCount = clampCount(
+      nextCount,
+      MATCH_CONDITION_LIMITS.participantCount.min,
+      MATCH_CONDITION_LIMITS.participantCount.max,
+    );
     const wasBalanced = femaleCount + maleCount === participantCount;
 
+    setParticipantCountInput(inputValue);
     setParticipantCount(safeCount);
 
     if (matchupMode !== "standard" && wasBalanced) {
@@ -181,8 +184,23 @@ export default function HomePage() {
     }
   }
 
+  function handleParticipantCountChange(value: string) {
+    const parsed = parseDraftCount(value);
+
+    if (parsed === null) {
+      setParticipantCountInput(value);
+      return;
+    }
+
+    applyParticipantCount(parsed, value);
+  }
+
   function commitParticipantCount() {
     setParticipantCountInput(String(participantCount));
+  }
+
+  function handleParticipantCountStep(delta: number) {
+    applyParticipantCount(participantCount + delta);
   }
 
   function handleMatchupModeChange(value: MatchupMode) {
@@ -213,6 +231,17 @@ export default function HomePage() {
     setFemaleCountInput(String(femaleCount));
   }
 
+  function handleFemaleCountStep(delta: number) {
+    const nextCount = clampCount(
+      femaleCount + delta,
+      MATCH_CONDITION_LIMITS.genderCount.min,
+      participantCount,
+    );
+
+    setFemaleCount(nextCount);
+    setFemaleCountInput(String(nextCount));
+  }
+
   function handleMaleCountChange(value: string) {
     setMaleCountInput(value);
     const parsed = parseDraftCount(value);
@@ -228,6 +257,17 @@ export default function HomePage() {
     setMaleCountInput(String(maleCount));
   }
 
+  function handleMaleCountStep(delta: number) {
+    const nextCount = clampCount(
+      maleCount + delta,
+      MATCH_CONDITION_LIMITS.genderCount.min,
+      participantCount,
+    );
+
+    setMaleCount(nextCount);
+    setMaleCountInput(String(nextCount));
+  }
+
   function handleCourtCountChange(value: string) {
     setCourtCountInput(value);
     const parsed = parseDraftCount(value);
@@ -236,13 +276,28 @@ export default function HomePage() {
       return;
     }
 
-    const safeCount = Math.max(1, parsed);
+    const safeCount = clampCount(
+      parsed,
+      MATCH_CONDITION_LIMITS.courtCount.min,
+      MATCH_CONDITION_LIMITS.courtCount.max,
+    );
 
     setCourtCount(safeCount);
   }
 
   function commitCourtCount() {
     setCourtCountInput(String(courtCount));
+  }
+
+  function handleCourtCountStep(delta: number) {
+    const nextCount = clampCount(
+      courtCount + delta,
+      MATCH_CONDITION_LIMITS.courtCount.min,
+      MATCH_CONDITION_LIMITS.courtCount.max,
+    );
+
+    setCourtCount(nextCount);
+    setCourtCountInput(String(nextCount));
   }
 
   function handleRoundCountChange(value: string) {
@@ -253,13 +308,28 @@ export default function HomePage() {
       return;
     }
 
-    const safeCount = Math.max(1, parsed);
+    const safeCount = clampCount(
+      parsed,
+      MATCH_CONDITION_LIMITS.roundCount.min,
+      MATCH_CONDITION_LIMITS.roundCount.max,
+    );
 
     setRoundCount(safeCount);
   }
 
   function commitRoundCount() {
     setRoundCountInput(String(roundCount));
+  }
+
+  function handleRoundCountStep(delta: number) {
+    const nextCount = clampCount(
+      roundCount + delta,
+      MATCH_CONDITION_LIMITS.roundCount.min,
+      MATCH_CONDITION_LIMITS.roundCount.max,
+    );
+
+    setRoundCount(nextCount);
+    setRoundCountInput(String(nextCount));
   }
 
   function currentInput() {
@@ -376,10 +446,13 @@ export default function HomePage() {
           matchupMode={matchupMode}
           participantCount={participantCount}
           participantCountInput={participantCountInput}
+          femaleCount={femaleCount}
           femaleCountInput={femaleCountInput}
+          maleCount={maleCount}
           maleCountInput={maleCountInput}
           courtCount={courtCount}
           courtCountInput={courtCountInput}
+          roundCount={roundCount}
           roundCountInput={roundCountInput}
           isGenerating={isGenerating}
           errorMessage={errorMessage}
@@ -387,14 +460,19 @@ export default function HomePage() {
           onMatchupModeChange={handleMatchupModeChange}
           onParticipantCountChange={handleParticipantCountChange}
           onParticipantCountCommit={commitParticipantCount}
+          onParticipantCountStep={handleParticipantCountStep}
           onFemaleCountChange={handleFemaleCountChange}
           onFemaleCountCommit={commitFemaleCount}
+          onFemaleCountStep={handleFemaleCountStep}
           onMaleCountChange={handleMaleCountChange}
           onMaleCountCommit={commitMaleCount}
+          onMaleCountStep={handleMaleCountStep}
           onCourtCountChange={handleCourtCountChange}
           onCourtCountCommit={commitCourtCount}
+          onCourtCountStep={handleCourtCountStep}
           onRoundCountChange={handleRoundCountChange}
           onRoundCountCommit={commitRoundCount}
+          onRoundCountStep={handleRoundCountStep}
           onSubmit={handleGenerate}
         />
 

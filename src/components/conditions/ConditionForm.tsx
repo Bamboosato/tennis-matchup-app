@@ -1,5 +1,7 @@
+import { CountStepperField } from "./CountStepperField";
 import { GenerationSummary } from "./GenerationSummary";
 import { HoverTooltip } from "@/components/ui/HoverTooltip";
+import { MATCH_CONDITION_LIMITS } from "@/features/matchmaking/model/limits";
 import type { MatchupMode } from "@/features/matchmaking/model/types";
 
 type ConditionFormProps = {
@@ -7,10 +9,13 @@ type ConditionFormProps = {
   matchupMode: MatchupMode;
   participantCount: number;
   participantCountInput: string;
+  femaleCount: number;
   femaleCountInput: string;
+  maleCount: number;
   maleCountInput: string;
   courtCount: number;
   courtCountInput: string;
+  roundCount: number;
   roundCountInput: string;
   isGenerating: boolean;
   errorMessage: string | null;
@@ -18,14 +23,19 @@ type ConditionFormProps = {
   onMatchupModeChange: (value: MatchupMode) => void;
   onParticipantCountChange: (value: string) => void;
   onParticipantCountCommit: () => void;
+  onParticipantCountStep: (delta: number) => void;
   onFemaleCountChange: (value: string) => void;
   onFemaleCountCommit: () => void;
+  onFemaleCountStep: (delta: number) => void;
   onMaleCountChange: (value: string) => void;
   onMaleCountCommit: () => void;
+  onMaleCountStep: (delta: number) => void;
   onCourtCountChange: (value: string) => void;
   onCourtCountCommit: () => void;
+  onCourtCountStep: (delta: number) => void;
   onRoundCountChange: (value: string) => void;
   onRoundCountCommit: () => void;
+  onRoundCountStep: (delta: number) => void;
   onSubmit: () => void;
 };
 
@@ -111,10 +121,13 @@ export function ConditionForm({
   matchupMode,
   participantCount,
   participantCountInput,
+  femaleCount,
   femaleCountInput,
+  maleCount,
   maleCountInput,
   courtCount,
   courtCountInput,
+  roundCount,
   roundCountInput,
   isGenerating,
   errorMessage,
@@ -122,14 +135,19 @@ export function ConditionForm({
   onMatchupModeChange,
   onParticipantCountChange,
   onParticipantCountCommit,
+  onParticipantCountStep,
   onFemaleCountChange,
   onFemaleCountCommit,
+  onFemaleCountStep,
   onMaleCountChange,
   onMaleCountCommit,
+  onMaleCountStep,
   onCourtCountChange,
   onCourtCountCommit,
+  onCourtCountStep,
   onRoundCountChange,
   onRoundCountCommit,
+  onRoundCountStep,
   onSubmit,
 }: ConditionFormProps) {
   const genderCountDisabled = matchupMode === "standard";
@@ -201,121 +219,91 @@ export function ConditionForm({
             value={eventName}
             onChange={(event) => onEventNameChange(event.target.value)}
             placeholder="例: 4月ナイター会"
-            className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)]"
+            className="w-full rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)]"
           />
         </label>
 
-        <label className="flex flex-col gap-2">
-          <span className="text-base font-semibold text-[var(--color-ink)]">参加人数</span>
-          <input
-            data-testid="participant-count-input"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min={4}
-            value={participantCountInput}
-            onChange={(event) => onParticipantCountChange(event.target.value)}
-            onBlur={onParticipantCountCommit}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") {
-                return;
-              }
+        <CountStepperField
+          label="参加人数"
+          value={participantCountInput}
+          numericValue={participantCount}
+          min={MATCH_CONDITION_LIMITS.participantCount.min}
+          max={MATCH_CONDITION_LIMITS.participantCount.max}
+          inputTestId="participant-count-input"
+          decrementTestId="participant-count-decrement"
+          incrementTestId="participant-count-increment"
+          decrementLabel="参加人数を1人減らす"
+          incrementLabel="参加人数を1人増やす"
+          onChange={onParticipantCountChange}
+          onCommit={onParticipantCountCommit}
+          onStep={onParticipantCountStep}
+        />
 
-              onParticipantCountCommit();
-            }}
-            className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)]"
-          />
-        </label>
+        <CountStepperField
+          label="女性人数"
+          value={femaleCountInput}
+          numericValue={femaleCount}
+          min={MATCH_CONDITION_LIMITS.genderCount.min}
+          max={participantCount}
+          inputTestId="female-count-input"
+          decrementTestId="female-count-decrement"
+          incrementTestId="female-count-increment"
+          decrementLabel="女性人数を1人減らす"
+          incrementLabel="女性人数を1人増やす"
+          disabled={genderCountDisabled}
+          onChange={onFemaleCountChange}
+          onCommit={onFemaleCountCommit}
+          onStep={onFemaleCountStep}
+        />
 
-        <label className="flex flex-col gap-2">
-          <span className="text-base font-semibold text-[var(--color-ink)]">女性人数</span>
-          <input
-            data-testid="female-count-input"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min={0}
-            value={femaleCountInput}
-            disabled={genderCountDisabled}
-            onChange={(event) => onFemaleCountChange(event.target.value)}
-            onBlur={onFemaleCountCommit}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") {
-                return;
-              }
+        <CountStepperField
+          label="男性人数"
+          value={maleCountInput}
+          numericValue={maleCount}
+          min={MATCH_CONDITION_LIMITS.genderCount.min}
+          max={participantCount}
+          inputTestId="male-count-input"
+          decrementTestId="male-count-decrement"
+          incrementTestId="male-count-increment"
+          decrementLabel="男性人数を1人減らす"
+          incrementLabel="男性人数を1人増やす"
+          disabled={genderCountDisabled}
+          onChange={onMaleCountChange}
+          onCommit={onMaleCountCommit}
+          onStep={onMaleCountStep}
+        />
 
-              onFemaleCountCommit();
-            }}
-            className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)] disabled:cursor-not-allowed disabled:bg-[#f3eee7] disabled:text-[var(--color-muted)]"
-          />
-        </label>
+        <CountStepperField
+          label="コート数"
+          value={courtCountInput}
+          numericValue={courtCount}
+          min={MATCH_CONDITION_LIMITS.courtCount.min}
+          max={MATCH_CONDITION_LIMITS.courtCount.max}
+          inputTestId="court-count-input"
+          decrementTestId="court-count-decrement"
+          incrementTestId="court-count-increment"
+          decrementLabel="コート数を1面減らす"
+          incrementLabel="コート数を1面増やす"
+          onChange={onCourtCountChange}
+          onCommit={onCourtCountCommit}
+          onStep={onCourtCountStep}
+        />
 
-        <label className="flex flex-col gap-2">
-          <span className="text-base font-semibold text-[var(--color-ink)]">男性人数</span>
-          <input
-            data-testid="male-count-input"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min={0}
-            value={maleCountInput}
-            disabled={genderCountDisabled}
-            onChange={(event) => onMaleCountChange(event.target.value)}
-            onBlur={onMaleCountCommit}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") {
-                return;
-              }
-
-              onMaleCountCommit();
-            }}
-            className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)] disabled:cursor-not-allowed disabled:bg-[#f3eee7] disabled:text-[var(--color-muted)]"
-          />
-        </label>
-
-        <label className="flex flex-col gap-2">
-          <span className="text-base font-semibold text-[var(--color-ink)]">コート数</span>
-          <input
-            data-testid="court-count-input"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min={1}
-            value={courtCountInput}
-            onChange={(event) => onCourtCountChange(event.target.value)}
-            onBlur={onCourtCountCommit}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") {
-                return;
-              }
-
-              onCourtCountCommit();
-            }}
-            className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)]"
-          />
-        </label>
-
-        <label className="flex flex-col gap-2">
-          <span className="text-base font-semibold text-[var(--color-ink)]">実施回数</span>
-          <input
-            data-testid="round-count-input"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min={1}
-            value={roundCountInput}
-            onChange={(event) => onRoundCountChange(event.target.value)}
-            onBlur={onRoundCountCommit}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") {
-                return;
-              }
-
-              onRoundCountCommit();
-            }}
-            className="rounded-2xl border border-[#cdbda9] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[var(--color-accent)] focus:ring-4 focus:ring-[rgba(240,106,60,0.16)]"
-          />
-        </label>
+        <CountStepperField
+          label="実施回数"
+          value={roundCountInput}
+          numericValue={roundCount}
+          min={MATCH_CONDITION_LIMITS.roundCount.min}
+          max={MATCH_CONDITION_LIMITS.roundCount.max}
+          inputTestId="round-count-input"
+          decrementTestId="round-count-decrement"
+          incrementTestId="round-count-increment"
+          decrementLabel="実施回数を1回減らす"
+          incrementLabel="実施回数を1回増やす"
+          onChange={onRoundCountChange}
+          onCommit={onRoundCountCommit}
+          onStep={onRoundCountStep}
+        />
       </div>
 
       <div className="mt-6">
