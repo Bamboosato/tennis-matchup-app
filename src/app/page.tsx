@@ -22,6 +22,7 @@ import { useMatchupGeneration } from "@/hooks/useMatchupGeneration";
 import { useMatchupPdfExport } from "@/hooks/useMatchupPdfExport";
 import { usePrintPreview } from "@/hooks/usePrintPreview";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
+import { withAssetVersion } from "@/lib/constants/assets";
 import { useMatchupStore } from "@/stores/matchupStore";
 
 function parseDraftCount(value: string): number | null {
@@ -421,10 +422,11 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-4">
             <Image
-              src="/icons/icon-192.png"
+              src={withAssetVersion("/icons/icon-192.png?iconv=transparent-v1")}
               alt=""
               width={56}
               height={56}
+              unoptimized
               className="h-14 w-14 shrink-0 rounded-2xl shadow-[0_10px_22px_rgba(53,40,19,0.14)]"
               loading="eager"
             />
