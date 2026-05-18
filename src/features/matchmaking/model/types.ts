@@ -2,6 +2,8 @@ export type MatchupMode = "standard" | "sameGenderPriority" | "mixedDoublesPrior
 
 export type ParticipantGender = "female" | "male";
 
+export type CourtAssignmentMode = "balanced" | "compact";
+
 export type ParticipantInput = {
   id: string;
   name: string;
@@ -84,6 +86,8 @@ export type PairCountMatrix = Record<string, Record<string, number>>;
 export type GenerationContext = {
   conditions: MatchConditions;
   seed: number;
+  courtAssignmentMode: CourtAssignmentMode;
+  eligibleParticipantIds: string[];
   restCounts: Record<string, number>;
   appearanceCounts: Record<string, number>;
   courtAppearanceCounts: Record<string, Record<number, number>>;
@@ -95,4 +99,6 @@ export type GenerationContext = {
   activeHistoryByRound: string[][];
 };
 
-export type PrintModel = MatchupResult;
+export type PrintModel = MatchupResult & {
+  shouldShowShareQr?: boolean;
+};

@@ -18,7 +18,7 @@ export function CourtMatchCard({ court, participants, compact = false }: CourtMa
         }
       >
         <p className={compact ? "text-xs font-semibold text-[var(--color-muted)]" : "text-base font-semibold text-[var(--color-muted)]"}>
-          コート {court.courtNumber}
+          Court {court.courtNumber}
         </p>
         <p className={compact ? "mt-1 text-xs text-[var(--color-muted)]" : "mt-3 text-base text-[var(--color-muted)]"}>
           この回では未使用です。

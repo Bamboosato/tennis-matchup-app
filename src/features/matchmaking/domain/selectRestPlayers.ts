@@ -10,7 +10,7 @@ type RestCandidate = {
 };
 
 export function getRestPlayerCountPerRound(ctx: GenerationContext): number {
-  const playerCount = ctx.conditions.participants.length;
+  const playerCount = ctx.eligibleParticipantIds.length;
   const usableCourtCount = Math.min(
     ctx.conditions.courtCount,
     Math.floor(playerCount / ctx.conditions.playersPerCourt),
@@ -47,13 +47,13 @@ export function selectRestPlayers(
 
   const lastRestSet = new Set(ctx.restHistoryByRound[roundIndex - 1] ?? []);
 
-  return ctx.conditions.participants
+  return ctx.eligibleParticipantIds
     .map<RestCandidate>((player) => ({
-      playerId: player.id,
-      wasRestLastRound: lastRestSet.has(player.id),
-      restCount: ctx.restCounts[player.id] ?? 0,
-      appearanceCount: ctx.appearanceCounts[player.id] ?? 0,
-      tieBreaker: seededValue(ctx.seed, roundIndex, player.id),
+      playerId: player,
+      wasRestLastRound: lastRestSet.has(player),
+      restCount: ctx.restCounts[player] ?? 0,
+      appearanceCount: ctx.appearanceCounts[player] ?? 0,
+      tieBreaker: seededValue(ctx.seed, roundIndex, player),
     }))
     .sort(compareRestPriority)
     .slice(0, restPlayerCount)

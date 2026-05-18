@@ -165,14 +165,18 @@ export function calculateScore(
   stats: PlayerStats[],
   rounds: RoundResult[],
 ): ResultScore {
-  const restCounts = stats.map((stat) => stat.rests);
-  const fairnessPenalty = Math.max(...restCounts) - Math.min(...restCounts);
-  const consecutiveRestPenalty = stats.reduce(
+  const eligibleParticipantIdSet = new Set(ctx.eligibleParticipantIds);
+  const scoredStats = stats.filter((stat) => eligibleParticipantIdSet.has(stat.playerId));
+  const restCounts = scoredStats.map((stat) => stat.rests);
+  const fairnessPenalty = restCounts.length > 0
+    ? Math.max(...restCounts) - Math.min(...restCounts)
+    : 0;
+  const consecutiveRestPenalty = scoredStats.reduce(
     (sum, stat) => sum + stat.consecutiveRestCount,
     0,
   );
   const genderPenalty = genderPreferencePenalty(ctx, rounds);
-  const playerIds = ctx.conditions.participants.map((participant) => participant.id);
+  const playerIds = ctx.eligibleParticipantIds;
   const encounterPenalty = duplicatedPairPenalty(ctx.encounterMatrix, playerIds);
   const sameTeammatePenalty = duplicatedPairPenalty(ctx.teammateMatrix, playerIds);
   const sameOpponentPenalty = duplicatedPairPenalty(ctx.opponentMatrix, playerIds);

@@ -240,6 +240,29 @@ function rebalanceCourtNumbers(
   );
 }
 
+function compactCourtNumbers(
+  activeCourts: ActiveCourtAssignment[],
+  ctx: GenerationContext,
+): CourtAssignment[] {
+  const allCourtNumbers = buildCourtNumbers(ctx.conditions.courtCount);
+  const activeAssignments = activeCourts.map((court, index) => ({
+    courtNumber: index + 1,
+    pairA: court.pairA,
+    pairB: court.pairB,
+    isUnused: false,
+  }));
+  const unusedAssignments = allCourtNumbers
+    .slice(activeCourts.length)
+    .map((courtNumber) => ({
+      courtNumber,
+      pairA: null,
+      pairB: null,
+      isUnused: true,
+    }));
+
+  return [...activeAssignments, ...unusedAssignments];
+}
+
 export function assignCourts(
   activePlayerIds: string[],
   ctx: GenerationContext,
@@ -268,6 +291,10 @@ export function assignCourts(
         remaining.splice(index, 1);
       }
     }
+  }
+
+  if (ctx.courtAssignmentMode === "compact") {
+    return compactCourtNumbers(activeCourts, ctx);
   }
 
   return rebalanceCourtNumbers(activeCourts, ctx);

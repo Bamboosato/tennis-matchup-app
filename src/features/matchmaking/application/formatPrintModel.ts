@@ -1,5 +1,15 @@
 import type { MatchupResult, PrintModel } from "../model/types";
 
-export function formatPrintModel(result: MatchupResult): PrintModel {
-  return result;
+type FormatPrintModelOptions = {
+  shouldShowShareQr?: boolean;
+};
+
+export function formatPrintModel(
+  result: MatchupResult,
+  options: FormatPrintModelOptions = {},
+): PrintModel {
+  return {
+    ...result,
+    shouldShowShareQr: options.shouldShowShareQr,
+  };
 }
