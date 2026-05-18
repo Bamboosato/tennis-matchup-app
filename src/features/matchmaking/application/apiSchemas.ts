@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { matchupModeSchema, participantInputSchema } from "../model/schemas";
+import { MATCH_CONDITION_LIMITS } from "../model/limits";
 
 const apiMatchConditionSchema = z
   .object({
@@ -8,19 +9,19 @@ const apiMatchConditionSchema = z
     participantCount: z
       .number({ message: "参加人数を入力してください" })
       .int("参加人数は整数で入力してください")
-      .min(4, "参加者は4人以上必要です")
-      .max(30, "参加人数は30人以下にしてください"),
+      .min(MATCH_CONDITION_LIMITS.participantCount.min, "参加者は4人以上必要です")
+      .max(MATCH_CONDITION_LIMITS.participantCount.max, "参加人数は30人以下にしてください"),
     participants: z.array(participantInputSchema),
     courtCount: z
       .number({ message: "コート数を入力してください" })
       .int("コート数は整数で入力してください")
-      .min(1, "コート数は1以上にしてください")
-      .max(8, "コート数は8以下にしてください"),
+      .min(MATCH_CONDITION_LIMITS.courtCount.min, "コート数は1以上にしてください")
+      .max(MATCH_CONDITION_LIMITS.courtCount.max, "コート数は8以下にしてください"),
     roundCount: z
       .number({ message: "実施回数を入力してください" })
       .int("実施回数は整数で入力してください")
-      .min(1, "実施回数は1以上にしてください")
-      .max(20, "実施回数は20回以下にしてください"),
+      .min(MATCH_CONDITION_LIMITS.roundCount.min, "実施回数は1以上にしてください")
+      .max(MATCH_CONDITION_LIMITS.roundCount.max, "実施回数は20回以下にしてください"),
   })
   .superRefine((value, ctx) => {
     if (value.participants.length !== value.participantCount) {

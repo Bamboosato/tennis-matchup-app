@@ -64,6 +64,53 @@ test("uses the latest typed conditions without requiring blur before generation"
   await expect(page.getByTestId("round-card-1")).toContainText("Court 4");
 });
 
+test("stepper controls update count conditions before generation", async ({ page }) => {
+  await page.goto("/");
+
+  for (let count = 0; count < 4; count += 1) {
+    await page.getByTestId("participant-count-increment").click();
+  }
+  await page.getByTestId("court-count-increment").click();
+  await page.getByTestId("round-count-increment").click();
+
+  await expect(page.getByTestId("participant-count-input")).toHaveValue("12");
+  await expect(page.getByTestId("court-count-input")).toHaveValue("3");
+  await expect(page.getByTestId("round-count-input")).toHaveValue("5");
+  await expect(page.getByTestId("summary-usable-courts")).toHaveText("3 面");
+  await expect(page.getByTestId("summary-active-players")).toHaveText("12 人");
+  await expect(page.getByTestId("summary-rest-players")).toHaveText("0 人");
+
+  await page.getByTestId("generate-button").click();
+
+  await expect(page.getByTestId("round-card-5")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toContainText("Court 3");
+});
+
+test("stepper controls respect minimums and gender mode disabled states", async ({ page }) => {
+  await page.goto("/");
+
+  for (let count = 0; count < 4; count += 1) {
+    await page.getByTestId("participant-count-decrement").click();
+  }
+  await page.getByTestId("court-count-decrement").click();
+  for (let count = 0; count < 3; count += 1) {
+    await page.getByTestId("round-count-decrement").click();
+  }
+
+  await expect(page.getByTestId("participant-count-input")).toHaveValue("4");
+  await expect(page.getByTestId("participant-count-decrement")).toBeDisabled();
+  await expect(page.getByTestId("court-count-input")).toHaveValue("1");
+  await expect(page.getByTestId("court-count-decrement")).toBeDisabled();
+  await expect(page.getByTestId("round-count-input")).toHaveValue("1");
+  await expect(page.getByTestId("round-count-decrement")).toBeDisabled();
+  await expect(page.getByTestId("female-count-increment")).toBeDisabled();
+  await expect(page.getByTestId("male-count-increment")).toBeDisabled();
+
+  await page.getByRole("button", { name: "混合対決優先" }).click();
+  await expect(page.getByTestId("female-count-increment")).toBeEnabled();
+  await expect(page.getByTestId("male-count-increment")).toBeEnabled();
+});
+
 test("enables gender counts only for gender-aware modes and shows compact gender labels", async ({ page }) => {
   await page.goto("/");
 
