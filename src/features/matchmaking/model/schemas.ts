@@ -31,10 +31,10 @@ export const matchConditionInputSchema = z
       .min(MATCH_CONDITION_LIMITS.courtCount.min, "コート数は1以上にしてください")
       .max(MATCH_CONDITION_LIMITS.courtCount.max, "コート数は8以下にしてください"),
     roundCount: z
-      .number({ message: "実施回数を入力してください" })
-      .int("実施回数は整数で入力してください")
-      .min(MATCH_CONDITION_LIMITS.roundCount.min, "実施回数は1以上にしてください")
-      .max(MATCH_CONDITION_LIMITS.roundCount.max, "実施回数は20回以下にしてください"),
+      .number({ message: "ラウンド数を入力してください" })
+      .int("ラウンド数は整数で入力してください")
+      .min(MATCH_CONDITION_LIMITS.roundCount.min, "ラウンド数は1以上にしてください")
+      .max(MATCH_CONDITION_LIMITS.roundCount.max, "ラウンド数は20回以下にしてください"),
   })
   .superRefine((value, ctx) => {
     if (value.participants.length !== value.participantCount) {

@@ -290,7 +290,7 @@ export function ConditionForm({
         />
 
         <CountStepperField
-          label="実施回数"
+          label="ラウンド数"
           value={roundCountInput}
           numericValue={roundCount}
           min={MATCH_CONDITION_LIMITS.roundCount.min}
@@ -298,8 +298,8 @@ export function ConditionForm({
           inputTestId="round-count-input"
           decrementTestId="round-count-decrement"
           incrementTestId="round-count-increment"
-          decrementLabel="実施回数を1回減らす"
-          incrementLabel="実施回数を1回増やす"
+          decrementLabel="ラウンド数を1回減らす"
+          incrementLabel="ラウンド数を1回増やす"
           onChange={onRoundCountChange}
           onCommit={onRoundCountCommit}
           onStep={onRoundCountStep}

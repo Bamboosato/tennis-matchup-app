@@ -78,7 +78,7 @@ export function PrintLayout({ model }: PrintLayoutProps) {
         ))}
       </div>
 
-      <PrintShareQr result={model} />
+      {model.shouldShowShareQr !== false ? <PrintShareQr result={model} /> : null}
     </div>
   );
 }

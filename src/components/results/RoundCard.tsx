@@ -7,6 +7,7 @@ type RoundCardProps = {
   participants: Participant[];
   compact?: boolean;
   completed?: boolean;
+  completionDisabled?: boolean;
   onCompletedChange?: (checked: boolean) => void;
 };
 
@@ -15,6 +16,7 @@ export function RoundCard({
   participants,
   compact = false,
   completed = false,
+  completionDisabled = false,
   onCompletedChange,
 }: RoundCardProps) {
   return (
@@ -41,11 +43,18 @@ export function RoundCard({
             Round {round.roundNumber}
           </p>
           {!compact && onCompletedChange ? (
-            <label className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white/80 px-3 py-1.5 text-sm font-medium text-[var(--color-muted)]">
+            <label
+              className={
+                completionDisabled
+                  ? "inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white/60 px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] opacity-60"
+                  : "inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white/80 px-3 py-1.5 text-sm font-medium text-[var(--color-muted)]"
+              }
+            >
               <input
                 data-testid={`round-complete-checkbox-${round.roundNumber}`}
                 type="checkbox"
                 checked={completed}
+                disabled={completionDisabled}
                 onChange={(event) => onCompletedChange(event.target.checked)}
                 className="h-4 w-4 accent-[var(--color-accent)]"
               />

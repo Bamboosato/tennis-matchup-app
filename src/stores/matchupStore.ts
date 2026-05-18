@@ -3,16 +3,27 @@
 import { create } from "zustand";
 import type { MatchConditionInput, MatchupResult } from "@/features/matchmaking/model/types";
 
+export type ResultSource = "full" | "continuation";
+
 type MatchupStoreState = {
   conditions: MatchConditionInput | null;
   result: MatchupResult | null;
+  resultSource: ResultSource;
+  eligibleParticipantIds: string[];
   errorMessage: string | null;
   currentSeed: number | null;
   rerollCount: number;
   isGenerating: boolean;
   isInstalled: boolean;
   setConditions: (conditions: MatchConditionInput) => void;
-  setResult: (result: MatchupResult, seed: number) => void;
+  setResult: (
+    result: MatchupResult,
+    seed: number,
+    meta?: {
+      source?: ResultSource;
+      eligibleParticipantIds?: string[];
+    },
+  ) => void;
   setErrorMessage: (message: string | null) => void;
   setGenerating: (isGenerating: boolean) => void;
   incrementRerollCount: () => void;
@@ -23,15 +34,21 @@ type MatchupStoreState = {
 export const useMatchupStore = create<MatchupStoreState>((set) => ({
   conditions: null,
   result: null,
+  resultSource: "full",
+  eligibleParticipantIds: [],
   errorMessage: null,
   currentSeed: null,
   rerollCount: 0,
   isGenerating: false,
   isInstalled: false,
   setConditions: (conditions) => set({ conditions }),
-  setResult: (result, seed) =>
+  setResult: (result, seed, meta) =>
     set({
       result,
+      resultSource: meta?.source ?? "full",
+      eligibleParticipantIds:
+        meta?.eligibleParticipantIds ??
+        result.conditions.participants.map((participant) => participant.id),
       currentSeed: seed,
       errorMessage: null,
     }),
@@ -42,5 +59,5 @@ export const useMatchupStore = create<MatchupStoreState>((set) => ({
       rerollCount: state.rerollCount + 1,
     })),
   setInstalled: (isInstalled) => set({ isInstalled }),
-  resetResult: () => set({ result: null }),
+  resetResult: () => set({ result: null, resultSource: "full", eligibleParticipantIds: [] }),
 }));

@@ -13,7 +13,7 @@ export function buildCandidateSeeds(
   return Array.from({ length: attempts }, (_, index) => baseSeed + index * MATCHUP_SEED_STEP);
 }
 
-function compareResults(left: MatchupResult, right: MatchupResult): number {
+export function compareMatchupResults(left: MatchupResult, right: MatchupResult): number {
   if (left.score.totalScore !== right.score.totalScore) {
     return left.score.totalScore - right.score.totalScore;
   }
@@ -47,7 +47,7 @@ export function generateMatchupUseCase(
     generateMatchup(conditions, candidateSeed),
   );
 
-  results.sort(compareResults);
+  results.sort(compareMatchupResults);
 
   return results[0];
 }

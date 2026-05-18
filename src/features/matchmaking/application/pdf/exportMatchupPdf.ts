@@ -161,19 +161,23 @@ function drawFooter(
   doc: jsPDF,
   pageNumber: number,
   totalPages: number,
-  qrCodeDataUrl: string,
+  qrCodeDataUrl: string | null,
 ) {
   const width = pageWidth(doc);
   const height = pageHeight(doc);
-  const qrX = width - PAGE_MARGIN - QR_SIZE;
-  const qrY = height - PAGE_MARGIN - QR_SIZE - 8;
 
-  doc.addImage(qrCodeDataUrl, "PNG", qrX, qrY, QR_SIZE, QR_SIZE);
+  if (qrCodeDataUrl) {
+    const qrX = width - PAGE_MARGIN - QR_SIZE;
+    const qrY = height - PAGE_MARGIN - QR_SIZE - 8;
 
-  doc.setFont(PDF_FONT_FAMILY, "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...SUBTLE_TEXT_COLOR);
-  doc.text("組合せQR", qrX + QR_SIZE / 2, qrY + QR_SIZE + 10, { align: "center" });
+    doc.addImage(qrCodeDataUrl, "PNG", qrX, qrY, QR_SIZE, QR_SIZE);
+
+    doc.setFont(PDF_FONT_FAMILY, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...SUBTLE_TEXT_COLOR);
+    doc.text("組合せQR", qrX + QR_SIZE / 2, qrY + QR_SIZE + 10, { align: "center" });
+  }
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...EMPHASIS_TEXT_COLOR);
@@ -200,22 +204,31 @@ function buildColumnStyles(doc: jsPDF, courtCount: number, participantCount: num
   return styles;
 }
 
-export async function exportMatchupPdf(result: MatchupResult, baseUrl?: string) {
+type ExportMatchupPdfOptions = {
+  shouldShowShareQr?: boolean;
+};
+
+export async function exportMatchupPdf(
+  result: MatchupResult,
+  baseUrl?: string,
+  options: ExportMatchupPdfOptions = {},
+) {
   const model = buildPdfDocumentModel(result);
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "pt",
     format: "a4",
   });
-  const shareUrl = buildSharedMatchUrl(result, baseUrl);
-  const qrCodeDataUrl = await QRCode.toDataURL(shareUrl, {
-    margin: 1,
-    width: 256,
-    color: {
-      dark: "#2f261b",
-      light: "#ffffff",
-    },
-  });
+  const qrCodeDataUrl = options.shouldShowShareQr === false
+    ? null
+    : await QRCode.toDataURL(buildSharedMatchUrl(result, baseUrl), {
+        margin: 1,
+        width: 256,
+        color: {
+          dark: "#2f261b",
+          light: "#ffffff",
+        },
+      });
 
   await registerPdfFont(doc);
 

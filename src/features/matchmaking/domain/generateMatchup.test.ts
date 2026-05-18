@@ -122,6 +122,20 @@ describe("generateMatchup", () => {
     expect(Math.max(...usageCounts) - Math.min(...usageCounts)).toBeLessThanOrEqual(1);
   });
 
+  it("uses young court numbers when compact assignment mode is requested", () => {
+    const result = generateMatchup(conditions(7, 2, 3), 20260518, {
+      courtAssignmentMode: "compact",
+    });
+
+    for (const round of result.rounds) {
+      expect(round.courts).toHaveLength(2);
+      expect(round.courts[0]?.courtNumber).toBe(1);
+      expect(round.courts[0]?.isUnused).toBe(false);
+      expect(round.courts[1]?.courtNumber).toBe(2);
+      expect(round.courts[1]?.isUnused).toBe(true);
+    }
+  });
+
   it("prioritizes all-same-gender courts in same-gender mode", () => {
     const result = generateMatchup(
       genderConditions(
