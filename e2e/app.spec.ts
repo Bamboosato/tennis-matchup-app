@@ -51,11 +51,24 @@ test("generates a matchup and shows summary data", async ({ page }) => {
   await expect(page.getByTestId("round-card-1")).toBeVisible();
   await expect(page.getByTestId("round-card-5")).toBeVisible();
   await expect(page.getByText("E2Eテスト会")).toBeVisible();
+  await expect(page.getByTestId("continuation-panel-toggle")).toContainText(
+    "ラウンド・参加者途中変更",
+  );
+  await expect(page.getByTestId("continuation-panel-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(page.getByTestId("continuation-panel-body")).toHaveCount(0);
+  const continuationPanelBox = await page.getByTestId("continuation-panel").boundingBox();
+  const playerStatsToggleBox = await page.getByTestId("player-stats-toggle").boundingBox();
+  expect(continuationPanelBox?.y).toBeLessThan(playerStatsToggleBox?.y ?? 0);
   await expect(page.getByTestId("player-stats-toggle")).toContainText("参加者別サマリー");
-  await expect(page.getByText("人ごとの集計")).toHaveCount(0);
+  await expect(page.getByTestId("player-stats-panel")).toHaveCount(0);
 
   await page.getByTestId("player-stats-toggle").click();
-  await expect(page.getByText("人ごとの集計")).toBeVisible();
+  await expect(page.getByTestId("player-stats-panel")).toBeVisible();
+  await expect(page.getByText("人ごとの集計")).toHaveCount(0);
+  await expect(page.getByTestId("player-stats-panel")).toContainText("総合スコア");
 });
 
 test("uses the latest typed conditions without requiring blur before generation", async ({ page }) => {
@@ -250,25 +263,79 @@ test("continuation regenerate keeps completed rounds and disables result sharing
   await page.getByTestId("round-complete-checkbox-1").check();
   await page.getByTestId("round-complete-checkbox-2").check();
   const roundOneText = await page.getByTestId("round-card-1").innerText();
-  await expect(page.getByText("ラウンド追加・参加者途中変更")).toBeVisible();
-  await expect(page.getByTestId("continuation-share-attention")).toContainText(
-    "※初回作成時の対戦モード、人数を基準に再作成されます。",
+  await expect(page.getByText("ラウンド・参加者途中変更")).toBeVisible();
+  await expect(page.getByTestId("continuation-panel-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "false",
   );
-  await expect(page.getByTestId("continuation-share-attention")).toContainText(
-    "※人数の増減は既に未実施のラウンドにのみ反映されます。",
+  await expect(page.getByTestId("continuation-panel-body")).toHaveCount(0);
+  await page.getByTestId("continuation-panel-toggle").click();
+  await expect(page.getByTestId("continuation-panel-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "true",
   );
+  await expect(page.getByTestId("continuation-panel-body")).toBeVisible();
   await expect(page.getByTestId("continuation-share-attention")).toContainText(
-    "※再作成後は対戦表の共有ができなくなります。",
+    "⚠ 共有リンクは再生成後に無効になります。",
   );
-  await expect(page.getByTestId("continuation-current-round")).toContainText("Round 3");
-  await expect(page.getByTestId("continuation-target-rounds")).toContainText("Round 3〜4");
+  await expect(page.getByTestId("continuation-completed-range")).toHaveCount(0);
+  await expect(page.getByTestId("continuation-current-round")).toHaveCount(0);
+  await expect(page.getByTestId("continuation-target-rounds")).toHaveCount(0);
+  await expect(page.getByTestId("continuation-notice-details-toggle")).toContainText(
+    "▼ 詳細",
+  );
+  await expect(page.getByTestId("continuation-notice-details")).toHaveCount(0);
+  await page.getByTestId("continuation-notice-details-toggle").click();
+  await expect(page.getByTestId("continuation-notice-details-toggle")).toContainText(
+    "▲ 詳細",
+  );
+  await expect(page.getByTestId("continuation-notice-details")).toContainText(
+    "・事前に終了ラウンドは実施済み☑に変更",
+  );
+  await expect(page.getByTestId("continuation-notice-details")).toContainText(
+    "・人数変更は未実施のラウンドにのみ反映",
+  );
+  await expect(page.getByTestId("continuation-notice-details")).toContainText(
+    "・初回作成時の対戦モード・人数を基準に再作成",
+  );
+  await expect
+    .poll(async () => page.getByTestId("continuation-notice-details").innerText())
+    .toBe(
+      [
+        "・事前に終了ラウンドは実施済み☑に変更",
+        "・人数変更は未実施のラウンドにのみ反映",
+        "・初回作成時の対戦モード・人数を基準に再作成",
+      ].join("\n"),
+    );
+  await expect(page.getByText("退出者の番号")).toBeVisible();
+  const continuationPanelBodyText = await page.getByTestId("continuation-panel-body").innerText();
+  expect(continuationPanelBodyText.indexOf("追加人数")).toBeGreaterThan(-1);
+  expect(continuationPanelBodyText.indexOf("退出者の番号")).toBeGreaterThan(-1);
+  expect(continuationPanelBodyText.indexOf("追加人数")).toBeLessThan(
+    continuationPanelBodyText.indexOf("退出者の番号"),
+  );
+
+  const printButtonClass = await page.getByTestId("print-preview-button").getAttribute("class");
+  const pdfButtonClass = await page.getByTestId("pdf-export-button").getAttribute("class");
+  expect(printButtonClass ?? "").toContain("bg-white");
+  expect(pdfButtonClass ?? "").toContain("bg-[var(--color-accent)]");
 
   await page.getByTestId("continuation-additional-round-count-increment").click();
   await expect(page.getByTestId("continuation-additional-round-count-input")).toHaveValue("1");
-  await expect(page.getByTestId("continuation-target-rounds")).toContainText("Round 3〜5");
   await page.getByTestId("withdraw-participant-player-03").click();
+  await page.getByTestId("continuation-add-count-input").fill("23");
+  await expect(page.getByTestId("continuation-disabled-reason")).toContainText(
+    "参加者は総計30人以下にしてください。",
+  );
+  await page.getByTestId("continuation-add-count-input").fill("1");
   await page.getByTestId("continuation-add-count-increment").click();
-  await expect(page.getByTestId("continuation-next-eligible-count")).toContainText("8人 → 8人");
+  await expect(page.getByTestId("continuation-next-eligible-count")).toContainText(
+    "変更後の参加人数：8人 → 9人",
+  );
+  await page.getByTestId("continuation-add-count-decrement").click();
+  await expect(page.getByTestId("continuation-next-eligible-count")).toContainText(
+    "変更後の参加人数：8人 → 8人",
+  );
 
   await page.getByTestId("continuation-submit-button").click();
   await expect(page.getByTestId("generation-complete-message")).toContainText(
@@ -314,13 +381,14 @@ test("continuation panel guides users to add rounds after all rounds are complet
   await page.getByTestId("round-complete-checkbox-1").check();
   await page.getByTestId("round-complete-checkbox-2").check();
 
-  await expect(page.getByTestId("continuation-current-round")).toContainText("なし");
+  await page.getByTestId("continuation-panel-toggle").click();
   await expect(page.getByTestId("continuation-disabled-reason")).toContainText(
     "全ラウンド実施済みです。追加ラウンドを指定して再作成してください。",
   );
 
   await page.getByTestId("continuation-additional-round-count-increment").click();
   await expect(page.getByTestId("continuation-disabled-reason")).toHaveCount(0);
-  await expect(page.getByTestId("continuation-current-round")).toContainText("Round 3");
-  await expect(page.getByTestId("continuation-target-rounds")).toContainText("Round 3");
+  await expect(page.getByTestId("continuation-submit-button")).toContainText(
+    "Round 3以降を再作成",
+  );
 });

@@ -13,23 +13,15 @@ export function PlayerStatsTable({
   score,
 }: PlayerStatsTableProps) {
   return (
-    <section className="rounded-[1.8rem] border border-white/70 bg-white/92 p-5 shadow-[0_18px_50px_rgba(53,40,19,0.1)] backdrop-blur sm:p-6">
-      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-base font-semibold uppercase tracking-[0.18em] text-[var(--color-ink)]">
-            Summary
-          </p>
-          <h3 className="mt-1 text-2xl font-semibold">人ごとの集計</h3>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-base text-[var(--color-muted)] sm:text-right">
-          <span>休憩の偏り: {score.fairnessPenalty}</span>
-          <span>連続休憩: {score.consecutiveRestPenalty}</span>
-          {score.genderPreferencePenalty > 0 ? (
-            <span>モード不一致: {score.genderPreferencePenalty}</span>
-          ) : null}
-          <span>顔合わせ重複: {score.encounterPenalty}</span>
-          <span>総合スコア: {score.totalScore}</span>
-        </div>
+    <div id="player-stats-panel" data-testid="player-stats-panel" className="mt-5 grid gap-5">
+      <div className="grid grid-cols-2 gap-2 text-base text-[var(--color-muted)] sm:ml-auto sm:w-fit sm:text-right">
+        <span>休憩の偏り: {score.fairnessPenalty}</span>
+        <span>連続休憩: {score.consecutiveRestPenalty}</span>
+        {score.genderPreferencePenalty > 0 ? (
+          <span>モード不一致: {score.genderPreferencePenalty}</span>
+        ) : null}
+        <span>顔合わせ重複: {score.encounterPenalty}</span>
+        <span>総合スコア: {score.totalScore}</span>
       </div>
 
       <div className="overflow-hidden rounded-[1.3rem] border border-[var(--color-line)]">
@@ -75,6 +67,6 @@ export function PlayerStatsTable({
           })}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

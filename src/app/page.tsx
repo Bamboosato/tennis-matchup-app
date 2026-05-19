@@ -757,6 +757,14 @@ export default function HomePage() {
               })}
             </section>
 
+            <ContinuationPanel
+              result={result}
+              eligibleParticipantIds={eligibleParticipantIds}
+              completedRoundCount={completedRoundCount}
+              isGenerating={isGenerating}
+              onSubmit={handleContinuationSubmit}
+            />
+
             <section className="rounded-[1.8rem] border border-white/70 bg-white/92 p-5 shadow-[0_18px_50px_rgba(53,40,19,0.1)] backdrop-blur sm:p-6">
               <button
                 data-testid="player-stats-toggle"
@@ -778,25 +786,15 @@ export default function HomePage() {
                   <ChevronDown size={24} aria-hidden="true" />
                 )}
               </button>
-            </section>
 
-            {statsExpanded ? (
-              <div id="player-stats-panel">
+              {statsExpanded ? (
                 <PlayerStatsTable
                   participants={result.conditions.participants}
                   stats={result.stats}
                   score={result.score}
                 />
-              </div>
-            ) : null}
-
-            <ContinuationPanel
-              result={result}
-              eligibleParticipantIds={eligibleParticipantIds}
-              completedRoundCount={completedRoundCount}
-              isGenerating={isGenerating}
-              onSubmit={handleContinuationSubmit}
-            />
+              ) : null}
+            </section>
 
             <StickyActionBar>
               <HoverTooltip text="現在の組合せを印刷用の別画面で開きます。">
@@ -804,7 +802,7 @@ export default function HomePage() {
                   data-testid="print-preview-button"
                   type="button"
                   onClick={() => openPrintPreview(result, { shouldShowShareQr: !shareDisabled })}
-                  className="rounded-full bg-[var(--color-accent)] px-6 py-3.5 text-base font-semibold text-white"
+                  className="rounded-full border border-[var(--color-line)] bg-white px-6 py-3.5 text-base font-semibold text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition"
                 >
                   印刷プレビューを開く
                 </button>
@@ -815,7 +813,7 @@ export default function HomePage() {
                   type="button"
                   onClick={() => void exportPdf(result, { shouldShowShareQr: !shareDisabled })}
                   disabled={isExportingPdf}
-                  className="rounded-full border border-[var(--color-line)] bg-white px-6 py-3.5 text-base font-semibold text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-[var(--color-accent)] px-6 py-3.5 text-base font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isExportingPdf ? "PDF出力中..." : "PDFを出力"}
                 </button>

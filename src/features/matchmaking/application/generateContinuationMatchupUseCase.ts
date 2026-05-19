@@ -163,7 +163,7 @@ export function generateContinuationMatchupUseCase(
   const nextParticipants = [...conditions.participants, ...addedParticipants];
 
   if (nextParticipants.length > MATCH_CONDITION_LIMITS.participantCount.max) {
-    throw new Error("参加者履歴は30人以下にしてください。");
+    throw new Error("参加者は総計30人以下にしてください。");
   }
 
   const withdrawnParticipantIdSet = new Set(withdrawnParticipantIds);
