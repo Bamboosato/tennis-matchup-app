@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Fraunces, IBM_Plex_Sans_JP } from "next/font/google";
 import { withAssetVersion } from "@/lib/constants/assets";
 import "./globals.css";
@@ -54,7 +55,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className={`${displayFont.variable} ${bodyFont.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

@@ -3,7 +3,7 @@
 ダブルス向けのテニス対戦組合せを、PC とスマホの両方で使いやすい形で作成する Next.js アプリです。  
 参加人数、コート数、ラウンド数を入力すると、休憩の公平性と連続休憩なしを優先しつつ、顔合わせの偏りを抑えた組合せを生成します。
 
-公開URL: [https://tennis-matchup-app.vercel.app/](https://tennis-matchup-app.vercel.app/)
+公開URL: [https://tennis-matchup-app.bamboosato.com/](https://tennis-matchup-app.bamboosato.com/)
 
 ## 主な機能
 

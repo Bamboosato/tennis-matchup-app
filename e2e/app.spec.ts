@@ -19,7 +19,7 @@ test("opens share dialog and shows QR code", async ({ page }) => {
 
   await page.getByTestId("open-share-dialog-button").click();
   await expect(page.getByTestId("app-share-dialog")).toBeVisible();
-  await expect(page.getByText("https://tennis-matchup-app.vercel.app/")).toBeVisible();
+  await expect(page.getByText("https://tennis-matchup-app.bamboosato.com/")).toBeVisible();
   await expect(page.getByTestId("native-share-button")).toBeVisible();
   await expect(page.getByTestId("copy-url-button")).toBeVisible();
 
