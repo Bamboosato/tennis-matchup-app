@@ -39,7 +39,7 @@
 Production:
 
 ```txt
-https://tennis-matchup-app.vercel.app
+https://tennis-matchup-app.bamboosato.com
 ```
 
 Preview 環境を利用する場合は、Preview Deployment の URL を指定する。
@@ -426,7 +426,7 @@ Route Handler で `process.env.MATCHUP_API_KEY` を参照し、`Authorization` �
 設定する環境変数:
 
 ```txt
-MATCHUP_API_BASE_URL=https://tennis-matchup-app.vercel.app
+MATCHUP_API_BASE_URL=https://tennis-matchup-app.bamboosato.com
 MATCHUP_API_KEY=<secret>
 ```
 
