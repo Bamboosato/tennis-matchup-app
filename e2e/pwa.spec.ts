@@ -72,6 +72,8 @@ test("serves the service worker with update-safe headers", async ({ request }) =
   expect(serviceWorker).toContain("/_next/static/");
   expect(serviceWorker).toContain("/icons/");
   expect(serviceWorker).toContain("/fonts/");
+  expect(serviceWorker).toContain('STATIC_CACHE_POLICY_VERSION = "v1"');
+  expect(serviceWorker).not.toContain("tennis-matchup-static-v1.2.1");
 });
 
 test("caches static assets without caching API responses", async ({ page }) => {
@@ -153,4 +155,20 @@ test("caches static assets without caching API responses", async ({ page }) => {
   expect(result.staticAssetCached).toBe(true);
   expect(result.apiResponseCached).toBe(false);
   expect(result.staticCacheName).toContain("tennis-matchup-static-");
+});
+
+test("keeps app icon URLs stable across app asset version updates", async ({ page }) => {
+  await page.goto("/");
+
+  const headerIconSrc = await page.getByTestId("app-header").locator("img").getAttribute("src");
+  const iconHrefs = await page
+    .locator('link[rel="icon"], link[rel="apple-touch-icon"]')
+    .evaluateAll((elements) =>
+      elements.map((element) => (element as HTMLLinkElement).href),
+    );
+
+  expect(headerIconSrc).toContain("/icons/icon-192.png?iconv=transparent-v1");
+  expect(headerIconSrc).not.toContain("assetv=");
+  expect(iconHrefs.length).toBeGreaterThan(0);
+  expect(iconHrefs.every((href) => !href.includes("assetv="))).toBe(true);
 });

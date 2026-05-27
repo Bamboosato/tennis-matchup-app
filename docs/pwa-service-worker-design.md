@@ -14,6 +14,7 @@
 - production 環境での Service Worker 登録
 - `/icons/*`、`/fonts/*`、`/_next/static/*` の runtime cache
 - `/icons/icon-192.png`、`/icons/icon-512.png` の install 時 precache
+- 画面表示用アイコンは deploy commit 連動の `assetv` を付けず、手動更新用の安定した `iconv` を使う
 - `/sw.js` の no-store ヘッダー設定
 - Service Worker とキャッシュ対象の E2E 検証
 
@@ -31,16 +32,20 @@
 | 対象 | 方針 | 理由 |
 | --- | --- | --- |
 | `/_next/static/*` | stale while revalidate | ファイル名がビルド単位で変わるため古いレスポンスを使っても安全性が高い |
-| `/icons/*` | stale while revalidate + 主要アイコン precache | ホーム画面追加と再訪問時に必要になる |
+| `/icons/*` | stale while revalidate + 主要アイコン precache | ホーム画面追加と再訪問時に必要になる。通常のアプリ更新では URL を変えない |
 | `/fonts/*` | stale while revalidate | 表示安定性を上げる |
 | HTML | キャッシュしない | 古い画面が残る事故を避ける |
 | `/api/*` | キャッシュしない | 生成結果、管理情報、認証状態を古くしない |
 
 Service Worker 自体は `/sw.js` として配信し、`Cache-Control: no-cache, no-store, must-revalidate` を付ける。
 
+画面左上のアプリアイコンと metadata の icon URL は `iconv=transparent-v1` のような手動バージョンを使う。`NEXT_PUBLIC_ASSET_VERSION` / Vercel commit SHA 由来の `assetv` は付けない。これにより、アプリ本体を更新してもアイコンの URL は変わらず、Service Worker とブラウザキャッシュを再利用できる。
+
 ## 4. キャッシュバージョン
 
-キャッシュ名は `tennis-matchup-static-v1.2.1` とする。
+キャッシュ名は `tennis-matchup-static-v1` とする。
+
+この version はアプリ version ではなく、キャッシュ方針の version として扱う。通常のアプリ更新では変更しない。キャッシュ対象、キャッシュ戦略、保存データの扱いを変える場合だけ更新する。
 
 Service Worker の `activate` で `tennis-matchup-static-` から始まる古いキャッシュを削除し、静的アセットキャッシュだけを入れ替える。
 

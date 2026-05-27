@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Fraunces, IBM_Plex_Sans_JP } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
-import { withAssetVersion } from "@/lib/constants/assets";
+import { APP_ICON_192_SRC, APP_ICON_512_SRC } from "@/lib/constants/assets";
 import "./globals.css";
 
 const displayFont = Fraunces({
@@ -29,19 +29,19 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: withAssetVersion("/icons/icon-192.png"),
+        url: APP_ICON_192_SRC,
         sizes: "192x192",
         type: "image/png",
       },
       {
-        url: withAssetVersion("/icons/icon-512.png"),
+        url: APP_ICON_512_SRC,
         sizes: "512x512",
         type: "image/png",
       },
     ],
     apple: [
       {
-        url: withAssetVersion("/icons/icon-192.png"),
+        url: APP_ICON_192_SRC,
         sizes: "192x192",
         type: "image/png",
       },

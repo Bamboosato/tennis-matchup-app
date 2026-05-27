@@ -1,7 +1,8 @@
 /* global self, caches, fetch */
 
 const STATIC_CACHE_PREFIX = "tennis-matchup-static-";
-const STATIC_CACHE_NAME = `${STATIC_CACHE_PREFIX}v1.2.1`;
+const STATIC_CACHE_POLICY_VERSION = "v1";
+const STATIC_CACHE_NAME = `${STATIC_CACHE_PREFIX}${STATIC_CACHE_POLICY_VERSION}`;
 
 const PRECACHE_URLS = ["/icons/icon-192.png", "/icons/icon-512.png"];
 const CACHEABLE_PATH_PREFIXES = ["/_next/static/", "/icons/", "/fonts/"];

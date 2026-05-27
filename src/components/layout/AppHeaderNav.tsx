@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, Menu } from "lucide-react";
 import { HoverTooltip } from "@/components/ui/HoverTooltip";
-import { withAssetVersion } from "@/lib/constants/assets";
+import { APP_ICON_192_SRC } from "@/lib/constants/assets";
 
 type AppHeaderNavProps = {
   canPromptInstall: boolean;
@@ -86,7 +86,7 @@ export function AppHeaderNav({
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <Image
-              src={withAssetVersion("/icons/icon-192.png?iconv=transparent-v1")}
+              src={APP_ICON_192_SRC}
               alt=""
               width={52}
               height={52}
