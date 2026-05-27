@@ -60,7 +60,8 @@
 
 - 対応ブラウザではインストールプロンプトを表示
 - iPhone / iPad では共有メニューからホーム画面追加
-- Service Worker は production 環境で登録し、`/_next/static/*`、`/icons/*`、`/fonts/*` の静的アセットのみをキャッシュ
+- PWA standalone 起動時はブランドロゴのアプリ内スプラッシュを一度だけ表示
+- Service Worker は production 環境で登録し、`/_next/static/*`、`/brand/*`、`/icons/*`、`/fonts/*` の静的アセットのみをキャッシュ
 - HTML、組合せ生成 API、管理 API のレスポンスは Service Worker キャッシュ対象外
 
 Service Worker の詳細仕様は [docs/pwa-service-worker-design.md](docs/pwa-service-worker-design.md) を参照してください。

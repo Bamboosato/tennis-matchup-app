@@ -12,7 +12,7 @@
 
 - `public/sw.js` による Service Worker の追加
 - production 環境での Service Worker 登録
-- `/icons/*`、`/fonts/*`、`/_next/static/*` の runtime cache
+- `/brand/*`、`/icons/*`、`/fonts/*`、`/_next/static/*` の runtime cache
 - `/icons/icon-192.png`、`/icons/icon-512.png` の install 時 precache
 - 画面表示用アイコンは deploy commit 連動の `assetv` を付けず、手動更新用の安定した `iconv` を使う
 - `/sw.js` の no-store ヘッダー設定
@@ -32,6 +32,7 @@
 | 対象 | 方針 | 理由 |
 | --- | --- | --- |
 | `/_next/static/*` | stale while revalidate | ファイル名がビルド単位で変わるため古いレスポンスを使っても安全性が高い |
+| `/brand/*` | stale while revalidate + スプラッシュロゴ precache | PWA standalone 起動時のブランドロゴ表示に必要になる |
 | `/icons/*` | stale while revalidate + 主要アイコン precache | ホーム画面追加と再訪問時に必要になる。通常のアプリ更新では URL を変えない |
 | `/fonts/*` | stale while revalidate | 表示安定性を上げる |
 | HTML | キャッシュしない | 古い画面が残る事故を避ける |

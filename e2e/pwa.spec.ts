@@ -70,6 +70,7 @@ test("serves the service worker with update-safe headers", async ({ request }) =
 
   const serviceWorker = await response.text();
   expect(serviceWorker).toContain("/_next/static/");
+  expect(serviceWorker).toContain("/brand/");
   expect(serviceWorker).toContain("/icons/");
   expect(serviceWorker).toContain("/fonts/");
   expect(serviceWorker).toContain('STATIC_CACHE_POLICY_VERSION = "v1"');
@@ -84,6 +85,7 @@ test("caches static assets without caching API responses", async ({ page }) => {
       return {
         supported: false,
         staticAssetCached: false,
+        brandAssetCached: false,
         apiResponseCached: false,
         staticCacheName: null,
       };
@@ -118,7 +120,9 @@ test("caches static assets without caching API responses", async ({ page }) => {
     }
 
     const staticUrl = `/icons/icon-192.png?sw-test=${Date.now()}`;
+    const brandUrl = `/brand/logo-bamboosato.webp?sw-test=${Date.now()}`;
     await fetch(staticUrl);
+    await fetch(brandUrl);
     await fetch("/api/v1/matchups/generate").catch(() => undefined);
 
     const cacheNames = await caches.keys();
@@ -131,6 +135,9 @@ test("caches static assets without caching API responses", async ({ page }) => {
 
     const staticAssetCached = Boolean(
       staticCache && (await staticCache.match(staticUrl)),
+    );
+    const brandAssetCached = Boolean(
+      staticCache && (await staticCache.match(brandUrl)),
     );
     const apiResponseCached = Boolean(
       staticCache && (await staticCache.match("/api/v1/matchups/generate")),
@@ -146,6 +153,7 @@ test("caches static assets without caching API responses", async ({ page }) => {
     return {
       supported: true,
       staticAssetCached,
+      brandAssetCached,
       apiResponseCached,
       staticCacheName,
     };
@@ -153,8 +161,52 @@ test("caches static assets without caching API responses", async ({ page }) => {
 
   expect(result.supported).toBe(true);
   expect(result.staticAssetCached).toBe(true);
+  expect(result.brandAssetCached).toBe(true);
   expect(result.apiResponseCached).toBe(false);
   expect(result.staticCacheName).toContain("tennis-matchup-static-");
+});
+
+test("does not show the PWA splash screen in a normal browser tab", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByTestId("pwa-splash-screen")).toHaveCount(0);
+});
+
+test("shows the PWA splash screen only once in standalone display mode", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalMatchMedia = window.matchMedia.bind(window);
+
+    window.matchMedia = (query: string) => {
+      if (query !== "(display-mode: standalone)") {
+        return originalMatchMedia(query);
+      }
+
+      return {
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      } as MediaQueryList;
+    };
+  });
+
+  await page.goto("/");
+
+  await expect(page.getByTestId("pwa-splash-screen")).toBeVisible();
+  await expect(page.getByTestId("pwa-splash-logo")).toHaveAttribute(
+    "src",
+    /\/brand\/logo-bamboosato\.webp\?brandv=bamboosato-v1/,
+  );
+  await expect(page.getByTestId("pwa-splash-screen")).toHaveCount(0, {
+    timeout: 3000,
+  });
+
+  await page.reload();
+  await expect(page.getByTestId("pwa-splash-screen")).toHaveCount(0);
 });
 
 test("keeps app icon URLs stable across app asset version updates", async ({ page }) => {

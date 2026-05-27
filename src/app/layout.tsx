@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Fraunces, IBM_Plex_Sans_JP } from "next/font/google";
+import { PwaSplashScreen } from "@/components/pwa/PwaSplashScreen";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { APP_ICON_192_SRC, APP_ICON_512_SRC } from "@/lib/constants/assets";
 import "./globals.css";
@@ -57,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="ja" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body>
+        <PwaSplashScreen />
         {children}
         <ServiceWorkerRegistration />
         <Analytics />
