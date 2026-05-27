@@ -61,3 +61,96 @@ test("serves a valid web manifest", async ({ request }) => {
     ]),
   );
 });
+
+test("serves the service worker with update-safe headers", async ({ request }) => {
+  const response = await request.get("/sw.js");
+  expect(response.ok()).toBeTruthy();
+  expect(response.headers()["content-type"]).toContain("application/javascript");
+  expect(response.headers()["cache-control"]).toContain("no-store");
+
+  const serviceWorker = await response.text();
+  expect(serviceWorker).toContain("/_next/static/");
+  expect(serviceWorker).toContain("/icons/");
+  expect(serviceWorker).toContain("/fonts/");
+});
+
+test("caches static assets without caching API responses", async ({ page }) => {
+  await page.goto("/");
+
+  const result = await page.evaluate(async () => {
+    if (!("serviceWorker" in navigator) || !("caches" in window)) {
+      return {
+        supported: false,
+        staticAssetCached: false,
+        apiResponseCached: false,
+        staticCacheName: null,
+      };
+    }
+
+    const existingRegistration = await navigator.serviceWorker.getRegistration(
+      "/",
+    );
+    await existingRegistration?.unregister();
+
+    const existingCacheNames = await caches.keys();
+    await Promise.all(
+      existingCacheNames
+        .filter((cacheName) => cacheName.startsWith("tennis-matchup-static-"))
+        .map((cacheName) => caches.delete(cacheName)),
+    );
+
+    const registration = await navigator.serviceWorker.register("/sw.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
+    await navigator.serviceWorker.ready;
+
+    if (!navigator.serviceWorker.controller) {
+      await new Promise<void>((resolve) => {
+        navigator.serviceWorker.addEventListener(
+          "controllerchange",
+          () => resolve(),
+          { once: true },
+        );
+      });
+    }
+
+    const staticUrl = `/icons/icon-192.png?sw-test=${Date.now()}`;
+    await fetch(staticUrl);
+    await fetch("/api/v1/matchups/generate").catch(() => undefined);
+
+    const cacheNames = await caches.keys();
+    const staticCacheName = cacheNames.find((cacheName) =>
+      cacheName.startsWith("tennis-matchup-static-"),
+    );
+    const staticCache = staticCacheName
+      ? await caches.open(staticCacheName)
+      : null;
+
+    const staticAssetCached = Boolean(
+      staticCache && (await staticCache.match(staticUrl)),
+    );
+    const apiResponseCached = Boolean(
+      staticCache && (await staticCache.match("/api/v1/matchups/generate")),
+    );
+
+    await registration.unregister();
+    await Promise.all(
+      cacheNames
+        .filter((cacheName) => cacheName.startsWith("tennis-matchup-static-"))
+        .map((cacheName) => caches.delete(cacheName)),
+    );
+
+    return {
+      supported: true,
+      staticAssetCached,
+      apiResponseCached,
+      staticCacheName,
+    };
+  });
+
+  expect(result.supported).toBe(true);
+  expect(result.staticAssetCached).toBe(true);
+  expect(result.apiResponseCached).toBe(false);
+  expect(result.staticCacheName).toContain("tennis-matchup-static-");
+});
