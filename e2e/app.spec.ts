@@ -8,6 +8,7 @@ test("shows tooltip on hover for primary actions on desktop", async ({ page }) =
     page.getByRole("tooltip", { name: "入力した条件で組合せを作成または再作成します。" }),
   ).toBeVisible();
 
+  await page.getByTestId("desktop-guide-menu-button").click();
   await page.getByTestId("open-share-dialog-button").hover();
   await expect(
     page.getByRole("tooltip", { name: "アプリURLを共有、コピー、QRコード表示できます。" }),
@@ -17,6 +18,7 @@ test("shows tooltip on hover for primary actions on desktop", async ({ page }) =
 test("opens share dialog and shows QR code", async ({ page }) => {
   await page.goto("/");
 
+  await page.getByTestId("desktop-guide-menu-button").click();
   await page.getByTestId("open-share-dialog-button").click();
   await expect(page.getByTestId("app-share-dialog")).toBeVisible();
   await expect(page.getByText("https://tennis-matchup-app.bamboosato.com/")).toBeVisible();

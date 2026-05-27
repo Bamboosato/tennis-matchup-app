@@ -1,13 +1,13 @@
 "use client";
 
 import { startTransition, useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { ChevronDown, ChevronUp, Settings } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { CourtCountAdjustmentDialog } from "@/components/conditions/CourtCountAdjustmentDialog";
 import { ConditionForm } from "@/components/conditions/ConditionForm";
+import { AppHeaderNav } from "@/components/layout/AppHeaderNav";
 import { ResponsiveShell } from "@/components/layout/ResponsiveShell";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
+import { InstallGuideDialog } from "@/components/pwa/InstallGuideDialog";
 import { AppShareDialog } from "@/components/share/AppShareDialog";
 import { ResultShareDialog } from "@/components/share/ResultShareDialog";
 import {
@@ -28,7 +28,6 @@ import { useMatchupGeneration } from "@/hooks/useMatchupGeneration";
 import { useMatchupPdfExport } from "@/hooks/useMatchupPdfExport";
 import { usePrintPreview } from "@/hooks/usePrintPreview";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
-import { withAssetVersion } from "@/lib/constants/assets";
 import { useMatchupStore } from "@/stores/matchupStore";
 
 const PLAYERS_PER_COURT = 4;
@@ -150,6 +149,7 @@ export default function HomePage() {
   });
   const [statsExpanded, setStatsExpanded] = useState(false);
   const [appShareDialogOpen, setAppShareDialogOpen] = useState(false);
+  const [installGuideDialogOpen, setInstallGuideDialogOpen] = useState(false);
   const [resultShareDialogOpen, setResultShareDialogOpen] = useState(false);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const completionMessageTimerRef = useRef<number | null>(null);
@@ -579,64 +579,13 @@ export default function HomePage() {
         </div>
       ) : null}
 
-      <header className="relative z-30 mb-5">
-        <section className="relative flex min-h-[88px] flex-col justify-center rounded-[2rem] border border-white/65 bg-[linear-gradient(135deg,rgba(244,112,66,0.22),rgba(255,255,255,0.94))] px-5 py-4 shadow-[0_22px_70px_rgba(53,40,19,0.12)] sm:px-6">
-          <div className="absolute right-5 top-1/2 hidden -translate-y-1/2 items-center gap-3 lg:flex">
-            {canPromptInstall && !isInstalled ? (
-              <HoverTooltip
-                text="ホーム画面に追加して、アプリのようにすぐ開けるようにします。"
-                placement="bottom"
-              >
-                <button
-                  data-testid="install-app-button"
-                  type="button"
-                  onClick={() => void promptInstall()}
-                  className="h-11 min-w-[148px] whitespace-nowrap rounded-full bg-[var(--color-accent)] px-5 text-base font-semibold text-white shadow-[0_10px_24px_rgba(240,106,60,0.22)] transition"
-                >
-                  ホーム画面追加
-                </button>
-              </HoverTooltip>
-            ) : null}
-            <HoverTooltip text="アプリURLを共有、コピー、QRコード表示できます。" placement="bottom">
-              <button
-                data-testid="open-share-dialog-button"
-                type="button"
-                onClick={() => setAppShareDialogOpen(true)}
-                className="h-11 min-w-[92px] whitespace-nowrap rounded-full border border-[var(--color-line)] bg-white px-5 text-base font-semibold text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition hover:border-[var(--color-accent)]"
-              >
-                共有
-              </button>
-            </HoverTooltip>
-            <Link
-              href="/admin"
-              aria-label="管理画面を開く"
-              title="管理画面"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--color-line)] bg-white text-[var(--color-ink)] shadow-[0_10px_24px_rgba(53,40,19,0.08)] transition hover:border-[var(--color-accent)]"
-            >
-              <Settings size={20} />
-            </Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <Image
-              src={withAssetVersion("/icons/icon-192.png?iconv=transparent-v1")}
-              alt=""
-              width={56}
-              height={56}
-              unoptimized
-              className="h-14 w-14 shrink-0 rounded-2xl shadow-[0_10px_22px_rgba(53,40,19,0.14)]"
-              loading="eager"
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-ink)]">
-                Tennis Matchup App
-              </p>
-              <p className="mt-2 text-base leading-7 text-[var(--color-muted)]">
-                ダブルスの対戦表と休憩者をまとめて作成。
-              </p>
-            </div>
-          </div>
-        </section>
-      </header>
+      <AppHeaderNav
+        canPromptInstall={canPromptInstall}
+        isInstalled={isInstalled}
+        onInstall={promptInstall}
+        onOpenInstallGuide={() => setInstallGuideDialogOpen(true)}
+        onOpenAppShare={() => setAppShareDialogOpen(true)}
+      />
 
       <main className="grid gap-6">
         <ConditionForm
@@ -825,6 +774,10 @@ export default function HomePage() {
       {appShareDialogOpen ? (
         <AppShareDialog open={appShareDialogOpen} onClose={() => setAppShareDialogOpen(false)} />
       ) : null}
+      <InstallGuideDialog
+        open={installGuideDialogOpen}
+        onClose={() => setInstallGuideDialogOpen(false)}
+      />
       {resultShareDialogOpen ? (
         <ResultShareDialog
           open={resultShareDialogOpen}
