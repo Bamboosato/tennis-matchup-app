@@ -27,6 +27,7 @@ test("hides print QR for continuation results", async ({ page, context }) => {
 
   await page.getByTestId("round-complete-checkbox-1").check();
   await page.getByTestId("round-complete-checkbox-2").check();
+  await page.getByTestId("continuation-panel-toggle").click();
   await page.getByTestId("withdraw-participant-player-03").click();
   await page.getByTestId("continuation-add-count-increment").click();
   await page.getByTestId("continuation-submit-button").click();

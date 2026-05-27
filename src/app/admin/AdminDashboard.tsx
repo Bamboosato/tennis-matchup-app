@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Save,
   Trash2,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type {
@@ -92,6 +93,15 @@ export function AdminDashboard({
     setAccounts([]);
     setApiRequestLogs([]);
     setAuditLogs([]);
+  }
+
+  function closeAdminPage() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.assign("/");
   }
 
   async function createDraftAccount() {
@@ -291,16 +301,28 @@ export function AdminDashboard({
             </p>
             <h1 className="mt-2 text-2xl font-semibold">API管理</h1>
           </div>
-          {authenticated ? (
+          <div className="flex items-center gap-2">
+            {authenticated ? (
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="inline-flex items-center gap-2 border border-[var(--color-line)] bg-white px-4 py-2 text-sm font-semibold"
+              >
+                <LogOut size={16} />
+                ログアウト
+              </button>
+            ) : null}
             <button
+              data-testid="admin-close-button"
               type="button"
-              onClick={() => void logout()}
+              aria-label="管理画面を閉じて前の画面に戻る"
+              onClick={closeAdminPage}
               className="inline-flex items-center gap-2 border border-[var(--color-line)] bg-white px-4 py-2 text-sm font-semibold"
             >
-              <LogOut size={16} />
-              ログアウト
+              <X size={16} />
+              閉じる
             </button>
-          ) : null}
+          </div>
         </header>
 
         {message ? (
