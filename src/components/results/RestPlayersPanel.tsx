@@ -5,12 +5,14 @@ type RestPlayersPanelProps = {
   restPlayerIds: string[];
   participants: Participant[];
   compact?: boolean;
+  showParticipantGender?: boolean;
 };
 
 export function RestPlayersPanel({
   restPlayerIds,
   participants,
   compact = false,
+  showParticipantGender = true,
 }: RestPlayersPanelProps) {
   const restPlayers = participants.filter((participant) =>
     restPlayerIds.includes(participant.id),
@@ -44,7 +46,7 @@ export function RestPlayersPanel({
                   : "rounded-full bg-white px-3 py-1.5 text-base font-medium text-[var(--color-ink)]"
               }
             >
-              {formatParticipantName(player)}
+              {formatParticipantName(player, { showGender: showParticipantGender })}
             </li>
           ))}
         </ul>

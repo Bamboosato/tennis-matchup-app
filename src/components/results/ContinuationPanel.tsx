@@ -44,6 +44,7 @@ function clampCount(value: number, min: number, max: number): number {
 function selectedParticipantLabel(
   result: MatchupResult,
   withdrawnParticipantIds: string[],
+  showParticipantGender: boolean,
 ): string {
   if (withdrawnParticipantIds.length === 0) {
     return "なし";
@@ -53,7 +54,9 @@ function selectedParticipantLabel(
     .map((participantId) => {
       const participant = result.conditions.participants.find((entry) => entry.id === participantId);
 
-      return participant ? formatParticipantName(participant) : participantId;
+      return participant
+        ? formatParticipantName(participant, { showGender: showParticipantGender })
+        : participantId;
     })
     .join("、");
 }
@@ -89,12 +92,20 @@ export function ContinuationPanel({
   const eligibleParticipantIdSet = new Set(eligibleParticipantIds);
   const withdrawalCandidates = result.conditions.participants
     .toSorted((left, right) => left.index - right.index);
+  const showParticipantGender = result.conditions.matchFormat !== "singles";
+  const usesGenderAwareAdd = result.conditions.matchFormat === "doubles" &&
+    result.conditions.matchupMode !== "standard";
+  const minEligibleCount = result.conditions.matchFormat === "singles"
+    ? MATCH_CONDITION_LIMITS.participantCount.singlesMin
+    : MATCH_CONDITION_LIMITS.participantCount.doublesMin;
   const effectiveAddCount =
-    result.conditions.matchupMode === "standard" ? addCount : addFemaleCount + addMaleCount;
+    usesGenderAwareAdd ? addFemaleCount + addMaleCount : addCount;
   const nextEligibleCount =
     eligibleParticipantIds.length - withdrawnParticipantIds.length + effectiveAddCount;
   const hasDraftChange =
     additionalRoundCount > 0 || withdrawnParticipantIds.length > 0 || effectiveAddCount > 0;
+  const draftChangeGuidance =
+    "追加ラウンド・退出者・追加参加者のいずれかを指定すると、未実施ラウンドを再作成できます。";
   const additionalRoundExceedsLimit =
     targetRoundCount > MATCH_CONDITION_LIMITS.roundCount.max;
   const addTotalExceedsLimit = effectiveAddCount > availableAddSlots;
@@ -104,12 +115,20 @@ export function ContinuationPanel({
     : !hasTargetRound
       ? "全ラウンド実施済みです。追加ラウンドを指定して再作成してください。"
       : !hasDraftChange
-        ? "追加ラウンド、退出者、追加参加者のいずれかを指定してください。"
+        ? draftChangeGuidance
         : addTotalExceedsLimit
           ? "参加者は総計30人以下にしてください。"
-          : nextEligibleCount < MATCH_CONDITION_LIMITS.participantCount.min
-            ? "今後の生成対象者は4人以上必要です。"
+          : nextEligibleCount < minEligibleCount
+            ? `今後の生成対象者は${minEligibleCount}人以上必要です。`
             : null;
+  const isDraftChangeGuidance =
+    disabledReason === draftChangeGuidance;
+  const changeSummaryClass = isDraftChangeGuidance || disabledReason === null
+    ? "rounded-[1.3rem] border border-[var(--color-line)] bg-[#faf7f0] px-4 py-3 text-base text-[var(--color-ink)]"
+    : "rounded-[1.3rem] border border-[#efb0a0] bg-[#fff1ed] px-4 py-3 text-base text-[var(--color-ink)]";
+  const disabledReasonClass = isDraftChangeGuidance
+    ? "mt-2 text-[var(--color-muted)]"
+    : "mt-2 text-[#8f3822]";
   const submitDisabled = isGenerating || disabledReason !== null;
 
   function resetDraft() {
@@ -325,7 +344,7 @@ export function ContinuationPanel({
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            {result.conditions.matchupMode === "standard" ? (
+            {!usesGenderAwareAdd ? (
               <CountStepperField
                 label="追加人数"
                 value={addCountInput}
@@ -403,7 +422,7 @@ export function ContinuationPanel({
                           : "rounded-full border border-[var(--color-line)] bg-white px-4 py-2 text-base font-semibold text-[var(--color-ink)] transition hover:border-[var(--color-accent)]"
                     }
                   >
-                    {formatParticipantName(participant)}
+                    {formatParticipantName(participant, { showGender: showParticipantGender })}
                   </button>
                 );
               })}
@@ -412,16 +431,20 @@ export function ContinuationPanel({
               data-testid="continuation-withdrawn-summary"
               className="mt-2 text-base text-[var(--color-muted)]"
             >
-              選択中: {selectedParticipantLabel(result, withdrawnParticipantIds)}
+              選択中: {selectedParticipantLabel(
+                result,
+                withdrawnParticipantIds,
+                showParticipantGender,
+              )}
             </p>
           </div>
 
-          <div className="rounded-[1.3rem] border border-[rgba(240,106,60,0.32)] bg-[#fff7ef] px-4 py-3 text-base text-[var(--color-ink)]">
+          <div data-testid="continuation-change-summary" className={changeSummaryClass}>
             <p data-testid="continuation-next-eligible-count" className="font-semibold">
               変更後の参加人数：{eligibleParticipantIds.length}人 → {nextEligibleCount}人
             </p>
             {disabledReason ? (
-              <p data-testid="continuation-disabled-reason" className="mt-2 text-[#8f3822]">
+              <p data-testid="continuation-disabled-reason" className={disabledReasonClass}>
                 {disabledReason}
               </p>
             ) : null}

@@ -334,7 +334,10 @@ export async function exportMatchupPdf(
 
         if (hookData.column.index >= 1 && hookData.column.index <= model.courtCount) {
           hookData.cell.styles.halign = "center";
-          hookData.cell.text = [""];
+
+          if (cellText.includes("\n")) {
+            hookData.cell.text = [""];
+          }
         }
 
         if (hookData.column.index === model.courtCount + 1) {

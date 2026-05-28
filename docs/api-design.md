@@ -89,7 +89,8 @@ API の安定性と予期しない負荷を避けるため、以下の上限を�
 
 | 項目 | 最小値 | 最大値 |
 | --- | ---: | ---: |
-| 参加人数 | 4 | 30 |
+| 参加人数（ダブルス） | 4 | 30 |
+| 参加人数（シングルス） | 2 | 30 |
 | 面数 | 1 | 8 |
 | 回数 | 1 | 20 |
 
@@ -111,7 +112,7 @@ API の安定性と予期しない負荷を避けるため、以下の上限を�
 
 - `id` は空文字不可。
 - `name` は trim 後に空文字不可。
-- `gender` は `female` / `male` のいずれか。`matchupMode` が `sameGenderPriority` / `mixedDoublesPriority` の場合は必須。`standard` では任意だが、指定された場合はレスポンスの `conditions.participants[]` に保持する。
+- `gender` は `female` / `male` のいずれか。ダブルスで `matchupMode` が `sameGenderPriority` / `mixedDoublesPriority` の場合は必須。ダブルス `standard` とシングルスでは任意で、指定された場合はレスポンスの `conditions.participants[]` に保持する。
 - `participants.length` は `participantCount` と一致する必要がある。
 - `participants[].id` は同一リクエスト内で一意であることを推奨する。
 
@@ -120,6 +121,8 @@ API の安定性と予期しない負荷を避けるため、以下の上限を�
 API のレスポンスには、既存の `MatchupResult` 相当の構造を返す。
 
 `generatedAt` は実行時刻に依存するため、同一 seed で replay した場合でも値が変わる。組合せ同一性の判定では `rounds`、`stats`、`score`、`seed` を比較対象とし、`generatedAt` は除外する。
+
+`matchFormat` は `doubles` / `singles` のいずれかとする。未指定時は後方互換のため `doubles` として扱う。シングルスでは `matchupMode` と `participants[].gender` を組合せ評価に使わないが、指定された値はレスポンスの `conditions` に保持する。
 
 ## 6. 通常生成 API
 
@@ -145,6 +148,7 @@ Authorization: Bearer <API_KEY>
 ```json
 {
   "eventName": "日曜練習",
+  "matchFormat": "doubles",
   "matchupMode": "standard",
   "participantCount": 8,
   "participants": [
@@ -168,12 +172,13 @@ Authorization: Bearer <API_KEY>
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `eventName` | string | no | 開催名。空文字または空白のみの場合は未指定扱い |
+| `matchFormat` | string | no | `doubles` / `singles`。未指定時は `doubles` |
 | `matchupMode` | string | no | `standard` / `sameGenderPriority` / `mixedDoublesPriority`。未指定時は `standard` |
-| `participantCount` | number | yes | 参加人数。4 以上 30 以下 |
+| `participantCount` | number | yes | 参加人数。ダブルスは 4 以上、シングルスは 2 以上。最大 30 |
 | `participants` | array | yes | 参加者一覧。件数は `participantCount` と一致 |
 | `participants[].id` | string | yes | 参加者 ID |
 | `participants[].name` | string | yes | 参加者名 |
-| `participants[].gender` | string | conditional | `female` / `male`。`matchupMode` が `standard` 以外の場合は必須。`standard` では任意で、指定時はレスポンスに保持する |
+| `participants[].gender` | string | conditional | `female` / `male`。ダブルスで `matchupMode` が `standard` 以外の場合は必須。シングルスでは任意で、指定時はレスポンスに保持するが生成には使わない |
 | `courtCount` | number | yes | 入力面数。1 以上 8 以下 |
 | `roundCount` | number | yes | 実施回数。1 以上 20 以下 |
 | `seed` | number | no | 候補探索の起点 seed。未指定の場合は API 側で生成 |
@@ -197,6 +202,7 @@ Date.now()
   "data": {
     "conditions": {
       "eventName": "日曜練習",
+      "matchFormat": "doubles",
       "matchupMode": "standard",
       "participants": [
         { "id": "p001", "name": "参加者1", "index": 0 },
@@ -245,6 +251,18 @@ Date.now()
 }
 ```
 
+シングルスの場合、`conditions.playersPerCourt` は `2` になり、各使用コートは `singlesMatch` を返す。`pairA` / `pairB` は `null` とする。
+
+```json
+{
+  "courtNumber": 1,
+  "pairA": null,
+  "pairB": null,
+  "singlesMatch": { "player1Id": "p001", "player2Id": "p002" },
+  "isUnused": false
+}
+```
+
 ## 7. 再現 API
 
 ### 7.1 概要
@@ -271,6 +289,7 @@ Authorization: Bearer <API_KEY>
 ```json
 {
   "eventName": "日曜練習",
+  "matchFormat": "doubles",
   "matchupMode": "standard",
   "participantCount": 8,
   "participants": [
@@ -294,12 +313,13 @@ Authorization: Bearer <API_KEY>
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `eventName` | string | no | 開催名。空文字または空白のみの場合は未指定扱い |
+| `matchFormat` | string | no | `doubles` / `singles`。未指定時は `doubles` |
 | `matchupMode` | string | no | `standard` / `sameGenderPriority` / `mixedDoublesPriority`。未指定時は `standard` |
-| `participantCount` | number | yes | 参加人数。4 以上 30 以下 |
+| `participantCount` | number | yes | 参加人数。ダブルスは 4 以上、シングルスは 2 以上。最大 30 |
 | `participants` | array | yes | 参加者一覧。件数は `participantCount` と一致 |
 | `participants[].id` | string | yes | 参加者 ID |
 | `participants[].name` | string | yes | 参加者名 |
-| `participants[].gender` | string | conditional | `female` / `male`。`matchupMode` が `standard` 以外の場合は必須。`standard` では任意で、指定時はレスポンスに保持する |
+| `participants[].gender` | string | conditional | `female` / `male`。ダブルスで `matchupMode` が `standard` 以外の場合は必須。シングルスでは任意で、指定時はレスポンスに保持するが生成には使わない |
 | `courtCount` | number | yes | 入力面数。1 以上 8 以下 |
 | `roundCount` | number | yes | 実施回数。1 以上 20 以下 |
 | `seed` | number | yes | 再現に使用する確定済み seed |
@@ -504,8 +524,11 @@ request
 - 再現 API が指定 seed で同じ組合せを返すこと。
 - 認証ヘッダーが正しく検証されること。
 - seed 未指定の通常生成で API 側が seed を補完すること。
+- `matchFormat` 未指定時に `doubles` として扱うこと。
+- `matchFormat=singles` で 1 コート 2 人の対戦として扱うこと。
 - `matchupMode` 未指定時に `standard` として扱うこと。
 - `sameGenderPriority` / `mixedDoublesPriority` が generate / replay の両方で同じ条件として扱われること。
+- シングルスでは `matchupMode` / `participants[].gender` を生成に使わず、レスポンスに保持すること。
 
 非機能観点:
 
@@ -516,9 +539,9 @@ request
 
 データ観点:
 
-- 参加人数、面数、回数の最小値と最大値を検証すること。
+- 試合形式ごとの参加人数最小値、面数、回数の最小値と最大値を検証すること。
 - `participants.length` と `participantCount` の不一致を検出すること。
-- `sameGenderPriority` / `mixedDoublesPriority` で `participants[].gender` 不足を検出すること。
+- ダブルスの `sameGenderPriority` / `mixedDoublesPriority` で `participants[].gender` 不足を検出すること。
 - 参加者名の前後空白が trim されること。
 - `generatedAt` を除けば replay 結果が通常生成結果と一致すること。
 
@@ -536,8 +559,11 @@ UI 観点:
 | N-003 | generate | seed 指定時に同じ base seed から候補探索されること |
 | N-004 | replay | generate の結果 seed を使って同じ組合せを再現できること |
 | N-005 | replay | 開催名未指定でも生成できること |
-| N-006 | both | `matchupMode` 未指定時に `standard` として扱うこと |
-| N-007 | both | `sameGenderPriority` / `mixedDoublesPriority` と参加者性別を指定して生成できること |
+| N-006 | both | `matchFormat` 未指定時に `doubles` として扱うこと |
+| N-007 | both | `matchupMode` 未指定時に `standard` として扱うこと |
+| N-008 | both | `sameGenderPriority` / `mixedDoublesPriority` と参加者性別を指定して生成できること |
+| N-009 | both | `matchFormat=singles` でシングルス対戦を生成・再現できること |
+| N-010 | both | シングルスでは `matchupMode` / `gender` を生成に使わずレスポンス保持すること |
 
 ### 11.3 異常系
 
@@ -555,14 +581,16 @@ UI 観点:
 
 | Case | API | Intent |
 | --- | --- | --- |
-| B-001 | both | 参加人数 4、面数 1、回数 1 で生成できること |
+| B-001 | both | ダブルス参加人数 4、面数 1、回数 1 で生成できること |
 | B-002 | both | 参加人数 30、面数 8、回数 20 で生成できること |
 | B-003 | both | 参加人数 31 で `422` を返すこと |
 | B-004 | both | 面数 9 で `422` を返すこと |
 | B-005 | both | 回数 21 で `422` を返すこと |
-| B-006 | both | 参加人数 3 で `422` を返すこと |
-| B-007 | both | 面数 0 で `422` を返すこと |
-| B-008 | both | 回数 0 で `422` を返すこと |
+| B-006 | both | ダブルス参加人数 3 で `422` を返すこと |
+| B-007 | both | シングルス参加人数 2、面数 1、回数 1 で生成できること |
+| B-008 | both | シングルス参加人数 1 で `422` を返すこと |
+| B-009 | both | 面数 0 で `422` を返すこと |
+| B-010 | both | 回数 0 で `422` を返すこと |
 
 ### 11.5 状態遷移
 

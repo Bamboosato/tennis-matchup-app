@@ -57,7 +57,41 @@ describe("matchup API schemas", () => {
   it("defaults matchupMode to standard when omitted", () => {
     const parsed = generateMatchupApiSchema.parse(input());
 
+    expect(parsed.matchFormat).toBe("doubles");
     expect(parsed.matchupMode).toBe("standard");
+  });
+
+  it("accepts singles with two participants", () => {
+    const parsed = generateMatchupApiSchema.safeParse(
+      input({
+        matchFormat: "singles",
+        participantCount: 2,
+        participants: [
+          { id: "p1", name: "Player 1" },
+          { id: "p2", name: "Player 2" },
+        ],
+        courtCount: 1,
+      }),
+    );
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects doubles with fewer than four participants", () => {
+    const parsed = generateMatchupApiSchema.safeParse(
+      input({
+        matchFormat: "doubles",
+        participantCount: 3,
+        participants: [
+          { id: "p1", name: "Player 1" },
+          { id: "p2", name: "Player 2" },
+          { id: "p3", name: "Player 3" },
+        ],
+        courtCount: 1,
+      }),
+    );
+
+    expect(parsed.success).toBe(false);
   });
 
   it("accepts gender-aware modes when each participant has gender", () => {
@@ -99,5 +133,29 @@ describe("matchup API schemas", () => {
     );
 
     expect(parsed.success).toBe(false);
+  });
+
+  it("keeps singles matchupMode and gender metadata without requiring gender", () => {
+    const parsed = generateMatchupApiSchema.safeParse(
+      input({
+        matchFormat: "singles",
+        matchupMode: "mixedDoublesPriority",
+        participantCount: 2,
+        participants: [
+          { id: "p1", name: "Player 1", gender: "female" },
+          { id: "p2", name: "Player 2" },
+        ],
+        courtCount: 1,
+      }),
+    );
+
+    expect(parsed.success).toBe(true);
+
+    if (!parsed.success) {
+      throw new Error("expected singles API schema to parse");
+    }
+
+    expect(parsed.data?.matchupMode).toBe("mixedDoublesPriority");
+    expect(parsed.data?.participants[0]?.gender).toBe("female");
   });
 });

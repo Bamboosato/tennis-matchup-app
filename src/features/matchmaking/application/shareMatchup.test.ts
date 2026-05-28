@@ -18,6 +18,8 @@ describe("shareMatchup", () => {
     const url = buildSharedMatchUrl(original, "https://example.com/");
     const restored = restoreSharedMatchupFromSearch(new URL(url).search);
 
+    expect(new URL(url).pathname).toBe("/doubles");
+    expect(new URL(url).searchParams.get("format")).toBe("doubles");
     expect(restored).not.toBeNull();
     expect(restored?.input).toEqual(input);
     expect(restored?.result.seed).toBe(original.seed);
@@ -64,6 +66,7 @@ describe("shareMatchup", () => {
     const search = new URL(url).search;
     const restored = restoreSharedMatchupFromSearch(search);
 
+    expect(new URL(url).pathname).toBe("/doubles");
     expect(new URL(url).searchParams.get("mode")).toBe("mixedDoublesPriority");
     expect(new URL(url).searchParams.get("female")).toBe("4");
     expect(new URL(url).searchParams.get("male")).toBe("4");
@@ -78,7 +81,31 @@ describe("shareMatchup", () => {
     );
 
     expect(restored?.input.matchupMode).toBe("standard");
+    expect(restored?.input.matchFormat).toBe("doubles");
     expect(restored?.result.conditions.matchupMode).toBe("standard");
+    expect(restored?.result.conditions.matchFormat).toBe("doubles");
+  });
+
+  it("builds a singles share URL that restores a singles matchup", () => {
+    const input = createAutoMatchConditionInput({
+      eventName: "シングルス",
+      matchFormat: "singles",
+      matchupMode: "mixedDoublesPriority",
+      participantCount: 4,
+      femaleCount: 2,
+      maleCount: 2,
+      courtCount: 2,
+      roundCount: 3,
+    });
+    const original = generateMatchupUseCase(input, 20260528);
+    const url = buildSharedMatchUrl(original, "https://example.com/");
+    const restored = restoreSharedMatchupFromSearch(new URL(url).search);
+
+    expect(new URL(url).pathname).toBe("/singles");
+    expect(new URL(url).searchParams.get("format")).toBe("singles");
+    expect(restored?.input.matchFormat).toBe("singles");
+    expect(restored?.result.conditions.playersPerCourt).toBe(2);
+    expect(restored?.result.rounds).toEqual(original.rounds);
   });
 
   it("returns null when the URL is not a shared matchup link", () => {

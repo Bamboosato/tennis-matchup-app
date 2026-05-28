@@ -23,14 +23,27 @@ import {
 } from "@/features/matchmaking/application/shareMatchup";
 import { generateContinuationMatchupUseCase } from "@/features/matchmaking/application/generateContinuationMatchupUseCase";
 import { MATCH_CONDITION_LIMITS } from "@/features/matchmaking/model/limits";
-import type { MatchConditionInput, MatchupMode } from "@/features/matchmaking/model/types";
+import type {
+  MatchConditionInput,
+  MatchConditions,
+  MatchFormat,
+  MatchupMode,
+} from "@/features/matchmaking/model/types";
 import { useMatchupGeneration } from "@/hooks/useMatchupGeneration";
 import { useMatchupPdfExport } from "@/hooks/useMatchupPdfExport";
 import { usePrintPreview } from "@/hooks/usePrintPreview";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
 import { useMatchupStore } from "@/stores/matchupStore";
 
-const PLAYERS_PER_COURT = 4;
+function playersPerCourt(matchFormat: MatchFormat): 2 | 4 {
+  return matchFormat === "singles" ? 2 : 4;
+}
+
+function minParticipantCount(matchFormat: MatchFormat): number {
+  return matchFormat === "singles"
+    ? MATCH_CONDITION_LIMITS.participantCount.singlesMin
+    : MATCH_CONDITION_LIMITS.participantCount.doublesMin;
+}
 
 type PendingCourtCountAdjustment = {
   input: MatchConditionInput;
@@ -68,7 +81,12 @@ function defaultGenderCounts(participantCount: number) {
 }
 
 function countInputGenders(input: MatchConditionInput | undefined, participantCount: number) {
-  if (!input || !input.matchupMode || input.matchupMode === "standard") {
+  if (
+    !input ||
+    input.matchFormat === "singles" ||
+    !input.matchupMode ||
+    input.matchupMode === "standard"
+  ) {
     return defaultGenderCounts(participantCount);
   }
 
@@ -86,7 +104,41 @@ function countInputGenders(input: MatchConditionInput | undefined, participantCo
   );
 }
 
-export default function HomePage() {
+function inputFromMatchConditions(conditions: MatchConditions): MatchConditionInput {
+  return {
+    eventName: conditions.eventName,
+    matchFormat: conditions.matchFormat,
+    matchupMode: conditions.matchupMode,
+    participantCount: conditions.participants.length,
+    participants: conditions.participants.map((participant) => ({
+      id: participant.id,
+      name: participant.name,
+      gender: participant.gender,
+    })),
+    courtCount: conditions.courtCount,
+    roundCount: conditions.roundCount,
+  };
+}
+
+function readStoredInputForMatchFormat(matchFormat: MatchFormat): MatchConditionInput | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  const formatState = useMatchupStore.getState().byFormat[matchFormat];
+
+  if (formatState.result) {
+    return inputFromMatchConditions(formatState.result.conditions);
+  }
+
+  return formatState.conditions ?? undefined;
+}
+
+type MatchupPageProps = {
+  routeMatchFormat?: MatchFormat;
+};
+
+export function MatchupPage({ routeMatchFormat = "doubles" }: MatchupPageProps) {
   const [initialSharedLoad] = useState(() => {
     if (typeof window === "undefined") {
       return { restored: null, message: null as string | null, errorMessage: null as string | null };
@@ -118,56 +170,60 @@ export default function HomePage() {
       return { restored: null, message: null, errorMessage: null };
     }
   });
-  const [eventName, setEventName] = useState(initialSharedLoad.restored?.input.eventName ?? "週末テニス会");
+  const matchFormat = initialSharedLoad.restored?.input.matchFormat ?? routeMatchFormat;
+  const [initialStoredInput] = useState(() =>
+    initialSharedLoad.restored
+      ? undefined
+      : readStoredInputForMatchFormat(matchFormat),
+  );
+  const initialInput = initialSharedLoad.restored?.input ?? initialStoredInput;
+  const initialParticipantCount = initialInput?.participantCount ??
+    (matchFormat === "singles" ? 4 : 8);
+  const [eventName, setEventName] = useState(initialInput?.eventName ?? "週末テニス会");
   const [participantCount, setParticipantCount] = useState(
-    initialSharedLoad.restored?.input.participantCount ?? 8,
+    initialParticipantCount,
   );
   const initialGenderCounts = countInputGenders(
-    initialSharedLoad.restored?.input,
-    initialSharedLoad.restored?.input.participantCount ?? 8,
+    initialInput,
+    initialParticipantCount,
   );
   const [matchupMode, setMatchupMode] = useState<MatchupMode>(
-    initialSharedLoad.restored?.input.matchupMode ?? "standard",
+    initialInput?.matchupMode ?? "standard",
   );
   const [participantCountInput, setParticipantCountInput] = useState(String(participantCount));
   const [femaleCount, setFemaleCount] = useState(initialGenderCounts.femaleCount);
   const [femaleCountInput, setFemaleCountInput] = useState(String(femaleCount));
   const [maleCount, setMaleCount] = useState(initialGenderCounts.maleCount);
   const [maleCountInput, setMaleCountInput] = useState(String(maleCount));
-  const [courtCount, setCourtCount] = useState(initialSharedLoad.restored?.input.courtCount ?? 2);
+  const [courtCount, setCourtCount] = useState(initialInput?.courtCount ?? 2);
   const [courtCountInput, setCourtCountInput] = useState(String(courtCount));
-  const [roundCount, setRoundCount] = useState(initialSharedLoad.restored?.input.roundCount ?? 4);
+  const [roundCount, setRoundCount] = useState(initialInput?.roundCount ?? 4);
   const [roundCountInput, setRoundCountInput] = useState(String(roundCount));
-  const [completedRoundsState, setCompletedRoundsState] = useState<{
-    generatedAt: string | null;
-    completedRoundCount: number;
-    lockedCompletedRoundCount: number;
-  }>({
-    generatedAt: null,
-    completedRoundCount: 0,
-    lockedCompletedRoundCount: 0,
-  });
   const [statsExpanded, setStatsExpanded] = useState(false);
   const [appShareDialogOpen, setAppShareDialogOpen] = useState(false);
   const [installGuideDialogOpen, setInstallGuideDialogOpen] = useState(false);
   const [resultShareDialogOpen, setResultShareDialogOpen] = useState(false);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const completionMessageTimerRef = useRef<number | null>(null);
+  const pendingContinuationScrollRoundRef = useRef<number | null>(null);
   const [pendingCourtCountAdjustment, setPendingCourtCountAdjustment] =
     useState<PendingCourtCountAdjustment | null>(null);
   const [sharedResultMessage, setSharedResultMessage] = useState<string | null>(
     initialSharedLoad.message,
   );
-  const result = useMatchupStore((state) => state.result);
-  const resultSource = useMatchupStore((state) => state.resultSource);
-  const eligibleParticipantIds = useMatchupStore((state) => state.eligibleParticipantIds);
+  const formatState = useMatchupStore((state) => state.byFormat[matchFormat]);
+  const result = formatState.result;
+  const resultSource = formatState.resultSource;
+  const eligibleParticipantIds = formatState.eligibleParticipantIds;
+  const completedRoundsState = formatState.completedRoundsState;
   const errorMessage = useMatchupStore((state) => state.errorMessage);
   const isGenerating = useMatchupStore((state) => state.isGenerating);
-  const rerollCount = useMatchupStore((state) => state.rerollCount);
-  const currentSeed = useMatchupStore((state) => state.currentSeed);
+  const rerollCount = formatState.rerollCount;
+  const currentSeed = formatState.currentSeed;
   const setInstalled = useMatchupStore((state) => state.setInstalled);
   const setConditions = useMatchupStore((state) => state.setConditions);
   const setResult = useMatchupStore((state) => state.setResult);
+  const setCompletedRoundsState = useMatchupStore((state) => state.setCompletedRoundsState);
   const setErrorMessage = useMatchupStore((state) => state.setErrorMessage);
   const setGenerating = useMatchupStore((state) => state.setGenerating);
   const { generate, regenerate } = useMatchupGeneration();
@@ -209,10 +265,31 @@ export default function HomePage() {
     }
   }, [initialSharedLoad, setConditions, setErrorMessage, setResult]);
 
+  useEffect(() => {
+    const targetRoundNumber = pendingContinuationScrollRoundRef.current;
+
+    if (targetRoundNumber === null || !result) {
+      return;
+    }
+
+    const targetElement = document.querySelector<HTMLElement>(
+      `[data-testid="round-card-${targetRoundNumber}"]`,
+    );
+
+    if (!targetElement) {
+      return;
+    }
+
+    pendingContinuationScrollRoundRef.current = null;
+    window.requestAnimationFrame(() => {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [result]);
+
   function applyParticipantCount(nextCount: number, inputValue = String(nextCount)) {
     const safeCount = clampCount(
       nextCount,
-      MATCH_CONDITION_LIMITS.participantCount.min,
+      minParticipantCount(matchFormat),
       MATCH_CONDITION_LIMITS.participantCount.max,
     );
     const wasBalanced = femaleCount + maleCount === participantCount;
@@ -220,7 +297,7 @@ export default function HomePage() {
     setParticipantCountInput(inputValue);
     setParticipantCount(safeCount);
 
-    if (matchupMode !== "standard" && wasBalanced) {
+    if (matchFormat === "doubles" && matchupMode !== "standard" && wasBalanced) {
       const nextMaleCount = Math.max(0, safeCount - femaleCount);
 
       setMaleCount(nextMaleCount);
@@ -379,6 +456,7 @@ export default function HomePage() {
   function currentInput() {
     return createAutoMatchConditionInput({
       eventName,
+      matchFormat,
       matchupMode,
       participantCount,
       femaleCount,
@@ -411,15 +489,18 @@ export default function HomePage() {
   }
 
   function suggestedCourtCount(input: MatchConditionInput): number | null {
-    if (input.participantCount < MATCH_CONDITION_LIMITS.participantCount.min) {
+    const playerCountPerCourt = playersPerCourt(input.matchFormat ?? "doubles");
+    const minimumParticipantCount = minParticipantCount(input.matchFormat ?? "doubles");
+
+    if (input.participantCount < minimumParticipantCount) {
       return null;
     }
 
-    if (input.participantCount >= input.courtCount * PLAYERS_PER_COURT) {
+    if (input.participantCount >= input.courtCount * playerCountPerCourt) {
       return null;
     }
 
-    const adjustedCourtCount = Math.floor(input.participantCount / PLAYERS_PER_COURT);
+    const adjustedCourtCount = Math.floor(input.participantCount / playerCountPerCourt);
 
     return adjustedCourtCount < input.courtCount ? adjustedCourtCount : null;
   }
@@ -487,7 +568,7 @@ export default function HomePage() {
   }
 
   function toggleRoundCompletion(roundNumber: number, checked: boolean) {
-    setCompletedRoundsState((current) => {
+    setCompletedRoundsState(matchFormat, (current) => {
       const generatedAt = result?.generatedAt ?? null;
       const currentCompletedRoundCount =
         current.generatedAt === generatedAt ? current.completedRoundCount : 0;
@@ -541,11 +622,12 @@ export default function HomePage() {
         nextSeed() + 193,
       );
 
+      pendingContinuationScrollRoundRef.current = completedRoundCount + 1;
       setResult(continuation.result, continuation.result.seed, {
         source: "continuation",
         eligibleParticipantIds: continuation.eligibleParticipantIds,
       });
-      setCompletedRoundsState({
+      setCompletedRoundsState(matchFormat, {
         generatedAt: continuation.result.generatedAt,
         completedRoundCount,
         lockedCompletedRoundCount: completedRoundCount,
@@ -580,6 +662,7 @@ export default function HomePage() {
       ) : null}
 
       <AppHeaderNav
+        activeMatchFormat={matchFormat}
         canPromptInstall={canPromptInstall}
         isInstalled={isInstalled}
         onInstall={promptInstall}
@@ -590,6 +673,7 @@ export default function HomePage() {
       <main className="grid gap-6">
         <ConditionForm
           eventName={eventName}
+          matchFormat={matchFormat}
           matchupMode={matchupMode}
           participantCount={participantCount}
           participantCountInput={participantCountInput}
@@ -698,6 +782,7 @@ export default function HomePage() {
                     key={`round-${round.roundNumber}`}
                     round={round}
                     participants={result.conditions.participants}
+                    showParticipantGender={result.conditions.matchFormat !== "singles"}
                     completed={completed}
                     completionDisabled={!canCompleteCurrent && !canReopenLatest}
                     onCompletedChange={(checked) => toggleRoundCompletion(round.roundNumber, checked)}
@@ -741,6 +826,7 @@ export default function HomePage() {
                   participants={result.conditions.participants}
                   stats={result.stats}
                   score={result.score}
+                  showParticipantGender={result.conditions.matchFormat !== "singles"}
                 />
               ) : null}
             </section>
@@ -795,4 +881,8 @@ export default function HomePage() {
       ) : null}
     </ResponsiveShell>
   );
+}
+
+export default function HomePage() {
+  return <MatchupPage routeMatchFormat="doubles" />;
 }

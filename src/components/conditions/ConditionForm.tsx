@@ -2,10 +2,11 @@ import { CountStepperField } from "./CountStepperField";
 import { GenerationSummary } from "./GenerationSummary";
 import { HoverTooltip } from "@/components/ui/HoverTooltip";
 import { MATCH_CONDITION_LIMITS } from "@/features/matchmaking/model/limits";
-import type { MatchupMode } from "@/features/matchmaking/model/types";
+import type { MatchFormat, MatchupMode } from "@/features/matchmaking/model/types";
 
 type ConditionFormProps = {
   eventName: string;
+  matchFormat: MatchFormat;
   matchupMode: MatchupMode;
   participantCount: number;
   participantCountInput: string;
@@ -66,11 +67,21 @@ function formatNumberRange(start: number, count: number): string | null {
 }
 
 function buildNumberingBreakdown(params: {
+  matchFormat: MatchFormat;
   matchupMode: MatchupMode;
   participantCount: number;
   femaleCountInput: string;
   maleCountInput: string;
 }) {
+  if (params.matchFormat === "singles") {
+    return {
+      label: "採番内訳",
+      value: `01～${formatParticipantNumber(params.participantCount)}：参加者`,
+      note: "シングルスでは性別マークを付けず、番号順に表示します。",
+      invalid: false,
+    };
+  }
+
   if (params.matchupMode === "standard") {
     return {
       label: "採番内訳",
@@ -118,6 +129,7 @@ function buildNumberingBreakdown(params: {
 
 export function ConditionForm({
   eventName,
+  matchFormat,
   matchupMode,
   participantCount,
   participantCountInput,
@@ -150,7 +162,12 @@ export function ConditionForm({
   onRoundCountStep,
   onSubmit,
 }: ConditionFormProps) {
-  const genderCountDisabled = matchupMode === "standard";
+  const isSingles = matchFormat === "singles";
+  const playersPerCourt = isSingles ? 2 : 4;
+  const participantMin = isSingles
+    ? MATCH_CONDITION_LIMITS.participantCount.singlesMin
+    : MATCH_CONDITION_LIMITS.participantCount.doublesMin;
+  const genderCountDisabled = isSingles || matchupMode === "standard";
   const matchupModeOptions: Array<{ label: string; value: MatchupMode; tooltip: string }> = [
     {
       label: "通常",
@@ -169,6 +186,7 @@ export function ConditionForm({
     },
   ];
   const numberingBreakdown = buildNumberingBreakdown({
+    matchFormat,
     matchupMode,
     participantCount,
     femaleCountInput,
@@ -190,27 +208,29 @@ export function ConditionForm({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.6fr)_repeat(5,minmax(92px,1fr))]">
-        <div className="flex flex-col gap-2 md:col-span-2 xl:col-span-6">
-          <span className="text-base font-semibold text-[var(--color-ink)]">対戦モード</span>
-          <div className="grid gap-2 rounded-2xl border border-[#cdbda9] bg-white p-1.5 sm:grid-cols-3">
-            {matchupModeOptions.map((option) => (
-              <HoverTooltip key={option.value} text={option.tooltip}>
-                <button
-                  type="button"
-                  aria-pressed={matchupMode === option.value}
-                  onClick={() => onMatchupModeChange(option.value)}
-                  className={
-                    matchupMode === option.value
-                      ? "w-full rounded-xl bg-[var(--color-accent)] px-3 py-2.5 text-base font-semibold text-white"
-                      : "w-full rounded-xl border border-[rgba(205,189,169,0.65)] bg-[#fbf4ec] px-3 py-2.5 text-base font-semibold text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:bg-[#fff0e4]"
-                  }
-                >
-                  {option.label}
-                </button>
-              </HoverTooltip>
-            ))}
+        {!isSingles ? (
+          <div className="flex flex-col gap-2 md:col-span-2 xl:col-span-6">
+            <span className="text-base font-semibold text-[var(--color-ink)]">対戦モード</span>
+            <div className="grid gap-2 rounded-2xl border border-[#cdbda9] bg-white p-1.5 sm:grid-cols-3">
+              {matchupModeOptions.map((option) => (
+                <HoverTooltip key={option.value} text={option.tooltip}>
+                  <button
+                    type="button"
+                    aria-pressed={matchupMode === option.value}
+                    onClick={() => onMatchupModeChange(option.value)}
+                    className={
+                      matchupMode === option.value
+                        ? "w-full rounded-xl bg-[var(--color-accent)] px-3 py-2.5 text-base font-semibold text-white"
+                        : "w-full rounded-xl border border-[rgba(205,189,169,0.65)] bg-[#fbf4ec] px-3 py-2.5 text-base font-semibold text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:bg-[#fff0e4]"
+                    }
+                  >
+                    {option.label}
+                  </button>
+                </HoverTooltip>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <label className="flex flex-col gap-2 md:col-span-2 xl:col-span-1">
           <span className="text-base font-semibold text-[var(--color-ink)]">開催名</span>
@@ -227,7 +247,7 @@ export function ConditionForm({
           label="参加人数"
           value={participantCountInput}
           numericValue={participantCount}
-          min={MATCH_CONDITION_LIMITS.participantCount.min}
+          min={participantMin}
           max={MATCH_CONDITION_LIMITS.participantCount.max}
           inputTestId="participant-count-input"
           decrementTestId="participant-count-decrement"
@@ -239,39 +259,43 @@ export function ConditionForm({
           onStep={onParticipantCountStep}
         />
 
-        <CountStepperField
-          label="女性人数"
-          value={femaleCountInput}
-          numericValue={femaleCount}
-          min={MATCH_CONDITION_LIMITS.genderCount.min}
-          max={participantCount}
-          inputTestId="female-count-input"
-          decrementTestId="female-count-decrement"
-          incrementTestId="female-count-increment"
-          decrementLabel="女性人数を1人減らす"
-          incrementLabel="女性人数を1人増やす"
-          disabled={genderCountDisabled}
-          onChange={onFemaleCountChange}
-          onCommit={onFemaleCountCommit}
-          onStep={onFemaleCountStep}
-        />
+        {!isSingles ? (
+          <>
+            <CountStepperField
+              label="女性人数"
+              value={femaleCountInput}
+              numericValue={femaleCount}
+              min={MATCH_CONDITION_LIMITS.genderCount.min}
+              max={participantCount}
+              inputTestId="female-count-input"
+              decrementTestId="female-count-decrement"
+              incrementTestId="female-count-increment"
+              decrementLabel="女性人数を1人減らす"
+              incrementLabel="女性人数を1人増やす"
+              disabled={genderCountDisabled}
+              onChange={onFemaleCountChange}
+              onCommit={onFemaleCountCommit}
+              onStep={onFemaleCountStep}
+            />
 
-        <CountStepperField
-          label="男性人数"
-          value={maleCountInput}
-          numericValue={maleCount}
-          min={MATCH_CONDITION_LIMITS.genderCount.min}
-          max={participantCount}
-          inputTestId="male-count-input"
-          decrementTestId="male-count-decrement"
-          incrementTestId="male-count-increment"
-          decrementLabel="男性人数を1人減らす"
-          incrementLabel="男性人数を1人増やす"
-          disabled={genderCountDisabled}
-          onChange={onMaleCountChange}
-          onCommit={onMaleCountCommit}
-          onStep={onMaleCountStep}
-        />
+            <CountStepperField
+              label="男性人数"
+              value={maleCountInput}
+              numericValue={maleCount}
+              min={MATCH_CONDITION_LIMITS.genderCount.min}
+              max={participantCount}
+              inputTestId="male-count-input"
+              decrementTestId="male-count-decrement"
+              incrementTestId="male-count-increment"
+              decrementLabel="男性人数を1人減らす"
+              incrementLabel="男性人数を1人増やす"
+              disabled={genderCountDisabled}
+              onChange={onMaleCountChange}
+              onCommit={onMaleCountCommit}
+              onStep={onMaleCountStep}
+            />
+          </>
+        ) : null}
 
         <CountStepperField
           label="コート数"
@@ -307,7 +331,11 @@ export function ConditionForm({
       </div>
 
       <div className="mt-6">
-        <GenerationSummary participantCount={participantCount} courtCount={courtCount} />
+        <GenerationSummary
+          participantCount={participantCount}
+          courtCount={courtCount}
+          playersPerCourt={playersPerCourt}
+        />
       </div>
 
       <div

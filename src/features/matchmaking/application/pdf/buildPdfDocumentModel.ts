@@ -5,7 +5,11 @@ import type {
   Participant,
   RoundResult,
 } from "../../model/types";
-import { formatPairParticipantNames, formatParticipantName } from "../formatParticipantName";
+import {
+  formatPairParticipantNames,
+  formatParticipantName,
+  formatSinglesMatchParticipantNames,
+} from "../formatParticipantName";
 
 export const PDF_ROUNDS_PER_PAGE = 12;
 const PDF_TYPOGRAPHY_DENSITY_ROUNDS_CAP = 10;
@@ -46,6 +50,15 @@ function createParticipantNameMap(participants: Participant[]) {
   );
 }
 
+function createParticipantNameMapWithoutGender(participants: Participant[]) {
+  return new Map(
+    participants.map((participant) => [
+      participant.id,
+      formatParticipantName(participant, { showGender: false }),
+    ]),
+  );
+}
+
 function createParticipantOrderMap(participants: Participant[]) {
   return new Map(participants.map((participant) => [participant.id, participant.index]));
 }
@@ -53,14 +66,38 @@ function createParticipantOrderMap(participants: Participant[]) {
 function formatCourtCell(
   court: CourtAssignment,
   participants: Participant[],
+  showParticipantGender: boolean,
 ) {
-  if (court.isUnused || !court.pairA || !court.pairB) {
+  if (court.isUnused) {
+    return "未使用";
+  }
+
+  if (court.singlesMatch) {
+    return formatSinglesMatchParticipantNames(
+      participants,
+      court.singlesMatch.player1Id,
+      court.singlesMatch.player2Id,
+      { showGender: showParticipantGender },
+    );
+  }
+
+  if (!court.pairA || !court.pairB) {
     return "未使用";
   }
 
   return [
-    formatPairParticipantNames(participants, court.pairA.player1Id, court.pairA.player2Id),
-    formatPairParticipantNames(participants, court.pairB.player1Id, court.pairB.player2Id),
+    formatPairParticipantNames(
+      participants,
+      court.pairA.player1Id,
+      court.pairA.player2Id,
+      { showGender: showParticipantGender },
+    ),
+    formatPairParticipantNames(
+      participants,
+      court.pairB.player1Id,
+      court.pairB.player2Id,
+      { showGender: showParticipantGender },
+    ),
   ].join("\n");
 }
 
@@ -87,11 +124,12 @@ function buildPdfRow(
   participants: Participant[],
   participantNameById: Map<string, string>,
   participantOrderById: Map<string, number>,
+  showParticipantGender: boolean,
 ): PdfTableRow {
   return {
     roundLabel: String(round.roundNumber),
     courtCells: round.courts.map((court) =>
-      formatCourtCell(court, participants),
+      formatCourtCell(court, participants, showParticipantGender),
     ),
     restCell: formatRestCell(round.restPlayerIds, participantNameById, participantOrderById),
   };
@@ -126,7 +164,10 @@ export function pickPdfTypography(params: {
 }
 
 export function buildPdfDocumentModel(result: MatchupResult): PdfDocumentModel {
-  const participantNameById = createParticipantNameMap(result.conditions.participants);
+  const showParticipantGender = result.conditions.matchFormat !== "singles";
+  const participantNameById = showParticipantGender
+    ? createParticipantNameMap(result.conditions.participants)
+    : createParticipantNameMapWithoutGender(result.conditions.participants);
   const participantOrderById = createParticipantOrderMap(result.conditions.participants);
   const pages: PdfPageModel[] = [];
 
@@ -141,6 +182,7 @@ export function buildPdfDocumentModel(result: MatchupResult): PdfDocumentModel {
             result.conditions.participants,
             participantNameById,
             participantOrderById,
+            showParticipantGender,
           ),
         ),
     });
@@ -211,7 +253,9 @@ export function buildPdfFileName(result: MatchupResult) {
   const prefix = sanitized || "tennis-matchup";
   const participantCount = result.conditions.participants.length;
   const courtCount = result.conditions.courtCount;
-  const modeLabel = matchupModeFileNameLabel(result.conditions.matchupMode);
+  const modeLabel = result.conditions.matchFormat === "singles"
+    ? "シングルス"
+    : matchupModeFileNameLabel(result.conditions.matchupMode);
 
   return `${prefix}_${participantCount}人_${courtCount}面_${modeLabel}-matchup.pdf`;
 }

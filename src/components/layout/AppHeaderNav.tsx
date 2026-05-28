@@ -6,8 +6,10 @@ import Link from "next/link";
 import { ChevronDown, Menu } from "lucide-react";
 import { HoverTooltip } from "@/components/ui/HoverTooltip";
 import { APP_ICON_192_SRC } from "@/lib/constants/assets";
+import type { MatchFormat } from "@/features/matchmaking/model/types";
 
 type AppHeaderNavProps = {
+  activeMatchFormat: MatchFormat;
   canPromptInstall: boolean;
   isInstalled: boolean;
   onInstall: () => Promise<boolean>;
@@ -25,6 +27,7 @@ const menuItemClass =
   "flex w-full items-center justify-between gap-3 rounded-[1rem] px-4 py-3 text-left text-base font-semibold text-[var(--color-ink)] transition hover:bg-[var(--color-surface)]";
 
 export function AppHeaderNav({
+  activeMatchFormat,
   canPromptInstall,
   isInstalled,
   onInstall,
@@ -104,23 +107,25 @@ export function AppHeaderNav({
                 className="mt-3 hidden flex-wrap items-center gap-2 lg:flex"
               >
                 <Link
-                  href="/"
-                  aria-current="page"
+                  href="/doubles"
+                  aria-current={activeMatchFormat === "doubles" ? "page" : undefined}
                   data-testid="desktop-doubles-tab"
-                  className={`${navButtonClass} ${activeNavButtonClass}`}
+                  className={`${navButtonClass} ${
+                    activeMatchFormat === "doubles" ? activeNavButtonClass : passiveNavButtonClass
+                  }`}
                 >
                   対戦表(ダブルス)
                 </Link>
-                <span
+                <Link
+                  href="/singles"
                   data-testid="desktop-singles-tab"
-                  aria-disabled="true"
-                  className={`${navButtonClass} cursor-not-allowed border border-[var(--color-line)] bg-white/55 text-[var(--color-muted)] opacity-80`}
+                  aria-current={activeMatchFormat === "singles" ? "page" : undefined}
+                  className={`${navButtonClass} ${
+                    activeMatchFormat === "singles" ? activeNavButtonClass : passiveNavButtonClass
+                  }`}
                 >
                   対戦表(シングルス)
-                  <span className="ml-2 rounded-full bg-[rgba(47,38,27,0.08)] px-2 py-0.5 text-xs font-semibold">
-                    近日公開予定
-                  </span>
-                </span>
+                </Link>
                 <div className="relative">
                   <button
                     data-testid="desktop-guide-menu-button"
@@ -206,24 +211,27 @@ export function AppHeaderNav({
             </div>
             <div className="grid gap-1">
               <Link
-                href="/"
-                aria-current="page"
+                href="/doubles"
+                aria-current={activeMatchFormat === "doubles" ? "page" : undefined}
                 data-testid="mobile-doubles-tab"
-                onClick={closeMenus}
-                className={`${menuItemClass} bg-[rgba(240,106,60,0.12)]`}
+                onNavigate={closeMenus}
+                className={`${menuItemClass} ${
+                  activeMatchFormat === "doubles" ? "bg-[rgba(240,106,60,0.12)]" : ""
+                }`}
               >
                 対戦表(ダブルス)
               </Link>
-              <div
+              <Link
+                href="/singles"
                 data-testid="mobile-singles-tab"
-                aria-disabled="true"
-                className={`${menuItemClass} cursor-not-allowed text-[var(--color-muted)] opacity-80`}
+                aria-current={activeMatchFormat === "singles" ? "page" : undefined}
+                onNavigate={closeMenus}
+                className={`${menuItemClass} ${
+                  activeMatchFormat === "singles" ? "bg-[rgba(240,106,60,0.12)]" : ""
+                }`}
               >
-                <span>対戦表(シングルス)</span>
-                <span className="rounded-full bg-[rgba(47,38,27,0.08)] px-2 py-1 text-xs font-semibold">
-                  近日公開予定
-                </span>
-              </div>
+                対戦表(シングルス)
+              </Link>
               <button
                 data-testid="mobile-guide-menu-button"
                 type="button"

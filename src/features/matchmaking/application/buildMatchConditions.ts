@@ -1,6 +1,10 @@
 import type { MatchConditionInput, MatchConditions } from "../model/types";
 import { matchConditionInputSchema } from "../model/schemas";
 
+function playersPerCourt(matchFormat: MatchConditions["matchFormat"]): MatchConditions["playersPerCourt"] {
+  return matchFormat === "singles" ? 2 : 4;
+}
+
 export function buildMatchConditions(input: MatchConditionInput): MatchConditions {
   const parsed = matchConditionInputSchema.parse({
     ...input,
@@ -13,6 +17,7 @@ export function buildMatchConditions(input: MatchConditionInput): MatchCondition
 
   return {
     eventName: parsed.eventName,
+    matchFormat: parsed.matchFormat,
     matchupMode: parsed.matchupMode,
     participants: parsed.participants.map((participant, index) => {
       const baseParticipant = {
@@ -30,6 +35,6 @@ export function buildMatchConditions(input: MatchConditionInput): MatchCondition
     }),
     courtCount: parsed.courtCount,
     roundCount: parsed.roundCount,
-    playersPerCourt: 4,
+    playersPerCourt: playersPerCourt(parsed.matchFormat),
   };
 }

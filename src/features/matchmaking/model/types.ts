@@ -1,3 +1,5 @@
+export type MatchFormat = "doubles" | "singles";
+
 export type MatchupMode = "standard" | "sameGenderPriority" | "mixedDoublesPriority";
 
 export type ParticipantGender = "female" | "male";
@@ -12,6 +14,7 @@ export type ParticipantInput = {
 
 export type MatchConditionInput = {
   eventName?: string;
+  matchFormat?: MatchFormat;
   matchupMode?: MatchupMode;
   participantCount: number;
   participants: ParticipantInput[];
@@ -28,14 +31,20 @@ export type Participant = {
 
 export type MatchConditions = {
   eventName?: string;
+  matchFormat: MatchFormat;
   matchupMode: MatchupMode;
   participants: Participant[];
   courtCount: number;
   roundCount: number;
-  playersPerCourt: 4;
+  playersPerCourt: 2 | 4;
 };
 
 export type Pair = {
+  player1Id: string;
+  player2Id: string;
+};
+
+export type SinglesMatch = {
   player1Id: string;
   player2Id: string;
 };
@@ -44,6 +53,7 @@ export type CourtAssignment = {
   courtNumber: number;
   pairA: Pair | null;
   pairB: Pair | null;
+  singlesMatch?: SinglesMatch | null;
   isUnused: boolean;
 };
 

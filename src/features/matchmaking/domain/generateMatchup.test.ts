@@ -5,6 +5,7 @@ import { generateMatchup } from "./generateMatchup";
 function conditions(participantCount: number, courtCount: number, roundCount: number): MatchConditions {
   return {
     eventName: "test",
+    matchFormat: "doubles",
     matchupMode: "standard",
     participants: Array.from({ length: participantCount }, (_, index) => ({
       id: `p${index + 1}`,
@@ -17,6 +18,26 @@ function conditions(participantCount: number, courtCount: number, roundCount: nu
   };
 }
 
+function singlesConditions(
+  participantCount: number,
+  courtCount: number,
+  roundCount: number,
+): MatchConditions {
+  return {
+    eventName: "singles-test",
+    matchFormat: "singles",
+    matchupMode: "standard",
+    participants: Array.from({ length: participantCount }, (_, index) => ({
+      id: `p${index + 1}`,
+      name: `Player ${index + 1}`,
+      index,
+    })),
+    courtCount,
+    roundCount,
+    playersPerCourt: 2,
+  };
+}
+
 function genderConditions(
   matchupMode: MatchConditions["matchupMode"],
   genders: Array<"female" | "male">,
@@ -25,6 +46,7 @@ function genderConditions(
 ): MatchConditions {
   return {
     eventName: "gender-test",
+    matchFormat: "doubles",
     matchupMode,
     participants: genders.map((gender, index) => ({
       id: `p${index + 1}`,
@@ -103,6 +125,25 @@ describe("generateMatchup", () => {
       expect(stat.rests).toBe(0);
       expect(stat.appearances).toBe(3);
     }
+  });
+
+  it("builds singles matches with two players per court", () => {
+    const result = generateMatchup(singlesConditions(5, 2, 4), 20260528);
+
+    for (const round of result.rounds) {
+      expect(round.activePlayerIds).toHaveLength(4);
+      expect(round.restPlayerIds).toHaveLength(1);
+      expect(round.courts.filter((court) => !court.isUnused)).toHaveLength(2);
+
+      for (const court of round.courts.filter((entry) => !entry.isUnused)) {
+        expect(court.singlesMatch).toBeDefined();
+        expect(court.pairA).toBeNull();
+        expect(court.pairB).toBeNull();
+      }
+    }
+
+    const restCounts = result.stats.map((stat) => stat.rests);
+    expect(Math.max(...restCounts) - Math.min(...restCounts)).toBeLessThanOrEqual(1);
   });
 
   it("spreads a single active match across the requested courts over time", () => {
