@@ -28,7 +28,9 @@ const EMPHASIS_TEXT_COLOR: [number, number, number] = [24, 18, 12];
 const SUBTLE_TEXT_COLOR: [number, number, number] = [117, 104, 88];
 const COURT_CELL_FONT_SIZE_BOOST = 1.8;
 const REST_CELL_FONT_SIZE_BOOST = 2.2;
-const COURT_TEAM_GAP_RATIO = 0.5;
+const COURT_MATCHUP_LINE_GAP_RATIO = 0.12;
+const COURT_VS_FONT_SIZE_RATIO = 0.66;
+const COURT_VS_MIN_FONT_SIZE = 6.2;
 
 let fontBytesPromise: Promise<string> | null = null;
 
@@ -204,6 +206,23 @@ function buildColumnStyles(doc: jsPDF, courtCount: number, participantCount: num
   return styles;
 }
 
+function buildCourtMatchupTextLayout(cellY: number, cellHeight: number, pairFontSize: number) {
+  const vsFontSize = Math.max(COURT_VS_MIN_FONT_SIZE, pairFontSize * COURT_VS_FONT_SIZE_RATIO);
+  const lineGap = pairFontSize * COURT_MATCHUP_LINE_GAP_RATIO;
+  const totalTextHeight = pairFontSize * 2 + vsFontSize + lineGap * 2;
+  const firstBaselineY = cellY + (cellHeight - totalTextHeight) / 2 + pairFontSize * 0.9;
+  const vsBaselineY = firstBaselineY + pairFontSize * 0.1 + lineGap + vsFontSize * 0.9;
+  const secondBaselineY = vsBaselineY + vsFontSize * 0.1 + lineGap + pairFontSize * 0.9;
+
+  return {
+    pairFontSize,
+    vsFontSize,
+    firstBaselineY,
+    vsBaselineY,
+    secondBaselineY,
+  };
+}
+
 type ExportMatchupPdfOptions = {
   shouldShowShareQr?: boolean;
 };
@@ -344,21 +363,31 @@ export async function exportMatchupPdf(
         }
 
         const fontSize = model.typography.tableBodyFontSize + COURT_CELL_FONT_SIZE_BOOST;
-        const lineGap = fontSize * COURT_TEAM_GAP_RATIO;
-        const totalTextHeight = fontSize * lines.length + lineGap;
-        const firstBaselineY =
-          hookData.cell.y + (hookData.cell.height - totalTextHeight) / 2 + fontSize * 0.9;
+        const layout = buildCourtMatchupTextLayout(
+          hookData.cell.y,
+          hookData.cell.height,
+          fontSize,
+        );
 
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(fontSize);
+        doc.setFontSize(layout.pairFontSize);
         doc.setTextColor(...EMPHASIS_TEXT_COLOR);
-        doc.text(lines[0], hookData.cell.x + hookData.cell.width / 2, firstBaselineY, {
+        doc.text(lines[0], hookData.cell.x + hookData.cell.width / 2, layout.firstBaselineY, {
           align: "center",
         });
+
+        doc.setFontSize(layout.vsFontSize);
+        doc.setTextColor(...SUBTLE_TEXT_COLOR);
+        doc.text("vs", hookData.cell.x + hookData.cell.width / 2, layout.vsBaselineY, {
+          align: "center",
+        });
+
+        doc.setFontSize(layout.pairFontSize);
+        doc.setTextColor(...EMPHASIS_TEXT_COLOR);
         doc.text(
           lines[1],
           hookData.cell.x + hookData.cell.width / 2,
-          firstBaselineY + fontSize + lineGap,
+          layout.secondBaselineY,
           {
             align: "center",
           },

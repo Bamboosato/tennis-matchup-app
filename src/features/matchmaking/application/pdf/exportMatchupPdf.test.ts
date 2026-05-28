@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import QRCode from "qrcode";
+import { autoTable } from "jspdf-autotable";
 import type { MatchupResult, Participant, RoundResult } from "../../model/types";
 import { exportMatchupPdf } from "./exportMatchupPdf";
+
+const pdfMockState = vi.hoisted(() => ({
+  textCalls: [] as Array<{ text: string; x: number; y: number }>,
+}));
 
 vi.mock("qrcode", () => ({
   default: {
@@ -34,7 +39,9 @@ vi.mock("jspdf", () => ({
     setFontSize() {}
     setLineWidth() {}
     setTextColor() {}
-    text() {}
+    text(value: unknown, x: number, y: number) {
+      pdfMockState.textCalls.push({ text: String(value), x, y });
+    }
   },
 }));
 
@@ -100,6 +107,8 @@ function result(): MatchupResult {
 
 describe("exportMatchupPdf", () => {
   beforeEach(() => {
+    pdfMockState.textCalls = [];
+    vi.mocked(autoTable).mockClear();
     vi.mocked(QRCode.toDataURL).mockClear();
     vi.stubGlobal(
       "fetch",
@@ -124,5 +133,46 @@ describe("exportMatchupPdf", () => {
     });
 
     expect(QRCode.toDataURL).toHaveBeenCalledOnce();
+  });
+
+  it("draws court matchups with a vs separator without increasing row height", async () => {
+    await exportMatchupPdf(result(), "https://example.com/", {
+      shouldShowShareQr: false,
+    });
+
+    const autoTableOptions = vi.mocked(autoTable).mock.calls[0]?.[1] as
+      | {
+          bodyStyles: { minCellHeight: number };
+          didDrawCell: (hookData: {
+            section: string;
+            column: { index: number };
+            cell: { raw: string; x: number; y: number; width: number; height: number };
+          }) => void;
+        }
+      | undefined;
+
+    expect(autoTableOptions?.bodyStyles.minCellHeight).toBe(48);
+
+    autoTableOptions?.didDrawCell({
+      section: "body",
+      column: { index: 1 },
+      cell: {
+        raw: "01 / 02\n03 / 04",
+        x: 100,
+        y: 200,
+        width: 160,
+        height: 48,
+      },
+    });
+
+    const courtTextCalls = pdfMockState.textCalls.filter((call) =>
+      ["01 / 02", "vs", "03 / 04"].includes(call.text),
+    );
+
+    expect(courtTextCalls.map((call) => call.text)).toEqual(["01 / 02", "vs", "03 / 04"]);
+    expect(courtTextCalls.map((call) => call.x)).toEqual([180, 180, 180]);
+    expect(courtTextCalls.every((call) => call.y > 200 && call.y < 248)).toBe(true);
+    expect(courtTextCalls[0]!.y).toBeLessThan(courtTextCalls[1]!.y);
+    expect(courtTextCalls[1]!.y).toBeLessThan(courtTextCalls[2]!.y);
   });
 });
