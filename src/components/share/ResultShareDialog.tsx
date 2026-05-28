@@ -57,7 +57,8 @@ export function ResultShareDialog({ open, result, onClose }: ResultShareDialogPr
   const shareTitle = result.conditions.eventName
     ? `${result.conditions.eventName} の対戦表`
     : "テニス対戦組合せApp の対戦表";
-  const shareText = `${result.conditions.participants.length}人 / ${result.conditions.courtCount}面 / ${result.conditions.roundCount}回の対戦表です。`;
+  const matchFormatLabel = result.conditions.matchFormat === "singles" ? "シングルス" : "ダブルス";
+  const shareText = `${matchFormatLabel} / ${result.conditions.participants.length}人 / ${result.conditions.courtCount}面 / ${result.conditions.roundCount}回の対戦表です。`;
 
   async function handleNativeShare() {
     if (!canNativeShare) {

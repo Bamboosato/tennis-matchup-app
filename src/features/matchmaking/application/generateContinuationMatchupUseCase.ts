@@ -73,13 +73,15 @@ function buildAddedParticipants(
   const usedParticipantIds = new Set(conditions.participants.map((participant) => participant.id));
   let nextIndex =
     Math.max(-1, ...conditions.participants.map((participant) => participant.index)) + 1;
+  const usesGenderAwareAdd = conditions.matchFormat === "doubles" &&
+    conditions.matchupMode !== "standard";
   const genders: Array<ParticipantGender | undefined> =
-    conditions.matchupMode === "standard"
-      ? Array.from({ length: addCount }, () => undefined)
-      : [
+    usesGenderAwareAdd
+      ? [
           ...Array.from({ length: addFemaleCount }, () => "female" as const),
           ...Array.from({ length: addMaleCount }, () => "male" as const),
-        ];
+        ]
+      : Array.from({ length: addCount }, () => undefined);
 
   return genders.map((gender) => {
     nextIndex = nextAvailableParticipantIndex(nextIndex, usedParticipantIds);
@@ -133,7 +135,9 @@ export function generateContinuationMatchupUseCase(
   }
 
   const effectiveAddCount =
-    conditions.matchupMode === "standard" ? addCount : addFemaleCount + addMaleCount;
+    conditions.matchFormat === "doubles" && conditions.matchupMode !== "standard"
+      ? addFemaleCount + addMaleCount
+      : addCount;
   const withdrawnParticipantIds = uniqueIds(input.withdrawnParticipantIds);
 
   if (
@@ -172,8 +176,12 @@ export function generateContinuationMatchupUseCase(
     ...addedParticipants.map((participant) => participant.id),
   ];
 
-  if (nextEligibleParticipantIds.length < MATCH_CONDITION_LIMITS.participantCount.min) {
-    throw new Error("今後の生成対象者は4人以上必要です。");
+  const minEligibleCount = conditions.matchFormat === "singles"
+    ? MATCH_CONDITION_LIMITS.participantCount.singlesMin
+    : MATCH_CONDITION_LIMITS.participantCount.doublesMin;
+
+  if (nextEligibleParticipantIds.length < minEligibleCount) {
+    throw new Error(`今後の生成対象者は${minEligibleCount}人以上必要です。`);
   }
 
   const fixedRounds = previousResult.rounds.slice(0, completedRoundCount);

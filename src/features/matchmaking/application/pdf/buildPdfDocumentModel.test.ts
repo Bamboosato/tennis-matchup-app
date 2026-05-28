@@ -49,6 +49,7 @@ function result(roundCount: number): MatchupResult {
   return {
     conditions: {
       eventName: "週末テニス会",
+      matchFormat: "doubles",
       matchupMode: "standard",
       participants: participants(6),
       courtCount: 2,
@@ -71,6 +72,54 @@ function result(roundCount: number): MatchupResult {
   };
 }
 
+function singlesResult(): MatchupResult {
+  return {
+    conditions: {
+      eventName: "シングルス会",
+      matchFormat: "singles",
+      matchupMode: "mixedDoublesPriority",
+      participants: [
+        { id: "player-01", name: "01", gender: "female", index: 0 },
+        { id: "player-02", name: "02", gender: "male", index: 1 },
+      ],
+      courtCount: 1,
+      roundCount: 1,
+      playersPerCourt: 2,
+    },
+    rounds: [
+      {
+        roundNumber: 1,
+        activePlayerIds: ["player-01", "player-02"],
+        restPlayerIds: [],
+        courts: [
+          {
+            courtNumber: 1,
+            isUnused: false,
+            pairA: null,
+            pairB: null,
+            singlesMatch: {
+              player1Id: "player-02",
+              player2Id: "player-01",
+            },
+          },
+        ],
+      },
+    ],
+    stats: [],
+    seed: 42,
+    score: {
+      fairnessPenalty: 0,
+      consecutiveRestPenalty: 0,
+      genderPreferencePenalty: 0,
+      encounterPenalty: 0,
+      sameTeammatePenalty: 0,
+      sameOpponentPenalty: 0,
+      totalScore: 0,
+    },
+    generatedAt: "2026-05-28T12:00:00.000Z",
+  };
+}
+
 describe("buildPdfDocumentModel", () => {
   it("splits rounds into pages of ten rows", () => {
     const model = buildPdfDocumentModel(result(PDF_ROUNDS_PER_PAGE + 2));
@@ -88,6 +137,12 @@ describe("buildPdfDocumentModel", () => {
       courtCells: ["01 / 02\n03 / 04", "未使用"],
       restCell: "05, 06",
     });
+  });
+
+  it("formats singles court rows without gender markers", () => {
+    const model = buildPdfDocumentModel(singlesResult());
+
+    expect(model.pages[0]?.rows[0]?.courtCells).toEqual(["01 vs 02"]);
   });
 
   it("sorts rest players in ascending participant order for pdf output", () => {
@@ -130,5 +185,9 @@ describe("buildPdfFileName", () => {
     pdfResult.conditions.eventName = "春季/練習会:決勝?";
 
     expect(buildPdfFileName(pdfResult)).toBe("春季練習会決勝_6人_2面_通常-matchup.pdf");
+  });
+
+  it("uses a singles label for singles file names", () => {
+    expect(buildPdfFileName(singlesResult())).toBe("シングルス会_2人_1面_シングルス-matchup.pdf");
   });
 });

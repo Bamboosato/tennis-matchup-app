@@ -1,14 +1,16 @@
 type GenerationSummaryProps = {
   participantCount: number;
   courtCount: number;
+  playersPerCourt?: 2 | 4;
 };
 
 export function GenerationSummary({
   participantCount,
   courtCount,
+  playersPerCourt = 4,
 }: GenerationSummaryProps) {
-  const usableCourtCount = Math.min(courtCount, Math.floor(participantCount / 4));
-  const activePlayerCount = usableCourtCount * 4;
+  const usableCourtCount = Math.min(courtCount, Math.floor(participantCount / playersPerCourt));
+  const activePlayerCount = usableCourtCount * playersPerCourt;
   const restPlayerCount = Math.max(0, participantCount - activePlayerCount);
 
   return (

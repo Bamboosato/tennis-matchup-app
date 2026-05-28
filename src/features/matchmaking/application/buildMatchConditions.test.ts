@@ -18,6 +18,7 @@ describe("buildMatchConditions", () => {
     });
 
     expect(result.eventName).toBe("週末テニス会");
+    expect(result.matchFormat).toBe("doubles");
     expect(result.matchupMode).toBe("standard");
     expect(result.playersPerCourt).toBe(4);
     expect(result.participants).toEqual([
@@ -67,6 +68,46 @@ describe("buildMatchConditions", () => {
       { id: "p3", name: "03", index: 2, gender: "male" },
       { id: "p4", name: "04", index: 3 },
     ]);
+  });
+
+  it("uses two players per court for singles conditions", () => {
+    const result = buildMatchConditions({
+      eventName: "singles",
+      matchFormat: "singles",
+      matchupMode: "mixedDoublesPriority",
+      participantCount: 2,
+      courtCount: 1,
+      roundCount: 1,
+      participants: [
+        { id: "p1", name: "01", gender: "female" },
+        { id: "p2", name: "02", gender: "male" },
+      ],
+    });
+
+    expect(result.matchFormat).toBe("singles");
+    expect(result.matchupMode).toBe("mixedDoublesPriority");
+    expect(result.playersPerCourt).toBe(2);
+    expect(result.participants.map((participant) => participant.gender)).toEqual([
+      "female",
+      "male",
+    ]);
+  });
+
+  it("rejects doubles with fewer than four participants", () => {
+    expect(() =>
+      buildMatchConditions({
+        eventName: "small doubles",
+        matchFormat: "doubles",
+        participantCount: 3,
+        courtCount: 1,
+        roundCount: 1,
+        participants: [
+          { id: "p1", name: "01" },
+          { id: "p2", name: "02" },
+          { id: "p3", name: "03" },
+        ],
+      }),
+    ).toThrow(ZodError);
   });
 
   it("keeps gender for gender-aware modes", () => {

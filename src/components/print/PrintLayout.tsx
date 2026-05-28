@@ -73,6 +73,7 @@ export function PrintLayout({ model }: PrintLayoutProps) {
             key={`print-round-${round.roundNumber}`}
             round={round}
             participants={model.conditions.participants}
+            showParticipantGender={model.conditions.matchFormat !== "singles"}
             compact
           />
         ))}

@@ -17,11 +17,19 @@ test("shows mobile navigation without the admin action", async ({ page }) => {
   await page.getByTestId("mobile-menu-button").click();
   await expect(page.getByTestId("mobile-nav-menu")).toBeVisible();
   await expect(page.getByTestId("mobile-doubles-tab")).toContainText("対戦表(ダブルス)");
-  await expect(page.getByTestId("mobile-singles-tab")).toContainText("近日公開予定");
+  await expect(page.getByTestId("mobile-singles-tab")).toContainText("対戦表(シングルス)");
   await expect(page.getByTestId("admin-nav-link")).toBeHidden();
 
+  await page.getByTestId("mobile-singles-tab").click();
+  await expect(page).toHaveURL(/\/singles$/);
+  await expect(page.getByTestId("participant-count-input")).toHaveValue("4");
+  await expect(page.getByTestId("summary-active-players")).toHaveText("4 人");
+  await expect(page.getByText("対戦モード")).toHaveCount(0);
+
   await page.getByTestId("mobile-menu-button").click();
-  await expect(page.getByTestId("mobile-nav-menu")).toHaveCount(0);
+  await expect(page.getByTestId("mobile-nav-menu")).toBeVisible();
+  await page.getByTestId("mobile-doubles-tab").click();
+  await expect(page).toHaveURL(/\/doubles$/);
 });
 
 test("opens the mobile navigation without moving the conditions panel", async ({ page }) => {

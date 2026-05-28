@@ -1,12 +1,13 @@
 # Tennis Matchup App
 
-ダブルス向けのテニス対戦組合せを、PC とスマホの両方で使いやすい形で作成する Next.js アプリです。  
+ダブルスとシングルスのテニス対戦組合せを、PC とスマホの両方で使いやすい形で作成する Next.js アプリです。
 参加人数、コート数、ラウンド数を入力すると、休憩の公平性と連続休憩なしを優先しつつ、顔合わせの偏りを抑えた組合せを生成します。
 
 公開URL: [https://tennis-matchup-app.bamboosato.com/](https://tennis-matchup-app.bamboosato.com/)
 
 ## 主な機能
 
+- ダブルス / シングルスを切り替えて組合せを生成
 - 参加人数、コート数、ラウンド数、開催名を指定して組合せを生成
 - 参加者を `00` からの連番で自動採番
 - 使用面数、1 回あたりの出場人数、休憩人数を生成前に表示
@@ -24,6 +25,7 @@
 ### 条件入力
 
 - 開催名
+- 試合形式（ダブルス / シングルス）
 - 参加人数
 - コート数
 - ラウンド数
@@ -34,7 +36,7 @@
 - 1回あたりの出場人数
 - 1回あたりの休憩人数
 
-コートは `参加人数 / 4` を超えては使えないため、入力したコート数が多い場合は確認後にコート数を調整して生成します。
+コートはダブルスでは `参加人数 / 4`、シングルスでは `参加人数 / 2` を超えては使えないため、入力したコート数が多い場合は確認後にコート数を調整して生成します。
 
 ### 組合せ生成
 
@@ -75,7 +77,8 @@ Service Worker の詳細仕様は [docs/pwa-service-worker-design.md](docs/pwa-s
 - scope は `matchups:generate` / `matchups:replay` を個別に許可
 - rate limit はアカウント単位で 1分あたりの回数を設定
 - 公開 API は `Authorization: Bearer <API_KEY>` で認証
-- API入力では画面と同じ対戦モードを `matchupMode` で指定可能。未指定時は通常扱い
+- API入力では試合形式を `matchFormat` で指定可能。未指定時は `doubles`
+- ダブルスでは画面と同じ対戦モードを `matchupMode` で指定可能。未指定時は通常扱い
 
 | Method | Path | 用途 |
 | --- | --- | --- |
@@ -84,11 +87,19 @@ Service Worker の詳細仕様は [docs/pwa-service-worker-design.md](docs/pwa-s
 
 API入力上限は以下です。
 
-| 項目 | 上限 |
-| --- | ---: |
-| 参加人数 | 30 |
-| 面数 | 8 |
-| 回数 | 20 |
+| 項目 | 最小 | 上限 |
+| --- | ---: | ---: |
+| 参加人数（ダブルス） | 4 | 30 |
+| 参加人数（シングルス） | 2 | 30 |
+| 面数 | 1 | 8 |
+| 回数 | 1 | 20 |
+
+試合形式の API 値は以下です。
+
+| 画面表示 | API値 |
+| --- | --- |
+| ダブルス | `doubles` |
+| シングルス | `singles` |
 
 対戦モードの API 値は以下です。
 
@@ -98,7 +109,7 @@ API入力上限は以下です。
 | 同性対決優先 | `sameGenderPriority` |
 | 混合対決優先 | `mixedDoublesPriority` |
 
-`sameGenderPriority` / `mixedDoublesPriority` では、各参加者に `gender: "female" | "male"` が必要です。`standard` では任意で、指定した場合は API レスポンスの `conditions.participants[]` に保持されます。
+`sameGenderPriority` / `mixedDoublesPriority` では、ダブルスの場合のみ各参加者に `gender: "female" | "male"` が必要です。`standard` では任意で、指定した場合は API レスポンスの `conditions.participants[]` に保持されます。シングルスでは `matchupMode` / `gender` を生成に使いませんが、指定された値はレスポンスに保持します。
 
 詳細仕様は [docs/api-design.md](docs/api-design.md) と [docs/api-admin-design.md](docs/api-admin-design.md) を参照してください。
 
@@ -176,10 +187,11 @@ npm run test:e2e
 
 ### データ観点
 
-- 参加人数に対して使用可能なコート数が正しく計算されること
+- 試合形式ごとに使用可能なコート数が正しく計算されること
 - 休憩人数、出場人数、ラウンド数が条件どおりに扱われること
 - API入力上限、scope、rate limit、有効/無効状態が正しく判定されること
-- 対戦モード未指定時は通常扱い、性別優先モードでは参加者性別必須として扱われること
+- `matchFormat` 未指定時はダブルス、対戦モード未指定時は通常扱いになること
+- ダブルスの性別優先モードでは参加者性別必須、シングルスでは `matchupMode` / `gender` が生成に影響しないこと
 
 ### UI観点
 
@@ -265,4 +277,5 @@ Vercel で公開しています。現在の運用は以下です。
 - API / 管理画面追加リリースは `v1.1.0`
 - 途中参加・退出時の残りラウンド再作成は `v1.2.0` で追加済み
 - トップナビゲーション改善は `v1.2.1` で追加
+- シングルス対応と試合形式別の状態保持は `v1.3.0` で追加
 - 開発ラインは Git ブランチで分離し、version とは別で扱う

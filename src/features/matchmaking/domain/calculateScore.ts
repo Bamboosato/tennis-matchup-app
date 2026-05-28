@@ -31,6 +31,10 @@ function buildGenderMap(ctx: GenerationContext): Map<string, ParticipantGender |
 }
 
 function courtPlayerIds(court: CourtAssignment): string[] {
+  if (!court.isUnused && court.singlesMatch) {
+    return [court.singlesMatch.player1Id, court.singlesMatch.player2Id];
+  }
+
   if (court.isUnused || !court.pairA || !court.pairB) {
     return [];
   }
@@ -85,6 +89,10 @@ function courtGenderPreferenceMismatch(
   genderByPlayerId: Map<string, ParticipantGender | undefined>,
   ctx: GenerationContext,
 ): number {
+  if (ctx.conditions.matchFormat === "singles") {
+    return 0;
+  }
+
   if (court.isUnused || !court.pairA || !court.pairB) {
     return 0;
   }

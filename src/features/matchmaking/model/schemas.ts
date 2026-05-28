@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { MATCH_CONDITION_LIMITS } from "./limits";
 
+export const matchFormatSchema = z.enum(["doubles", "singles"]);
+
 export const matchupModeSchema = z.enum([
   "standard",
   "sameGenderPriority",
@@ -18,11 +20,12 @@ export const participantInputSchema = z.object({
 export const matchConditionInputSchema = z
   .object({
     eventName: z.string().trim().optional(),
+    matchFormat: matchFormatSchema.default("doubles"),
     matchupMode: matchupModeSchema.default("standard"),
     participantCount: z
       .number({ message: "参加人数を入力してください" })
       .int("参加人数は整数で入力してください")
-      .min(MATCH_CONDITION_LIMITS.participantCount.min, "参加者は4人以上必要です")
+      .min(MATCH_CONDITION_LIMITS.participantCount.singlesMin, "参加者は2人以上必要です")
       .max(MATCH_CONDITION_LIMITS.participantCount.max, "参加人数は30人以下にしてください"),
     participants: z.array(participantInputSchema),
     courtCount: z
@@ -46,6 +49,18 @@ export const matchConditionInputSchema = z
     }
 
     if (
+      value.matchFormat === "doubles" &&
+      value.participantCount < MATCH_CONDITION_LIMITS.participantCount.doublesMin
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["participantCount"],
+        message: "ダブルスでは参加者は4人以上必要です",
+      });
+    }
+
+    if (
+      value.matchFormat === "doubles" &&
       value.matchupMode !== "standard" &&
       value.participants.some((participant) => !participant.gender)
     ) {

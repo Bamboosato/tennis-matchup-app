@@ -2,7 +2,7 @@
 
 ## 1. 目的
 
-ダブルス組合せ生成に、以下の対戦モードを追加する。
+ダブルス組合せ生成に、以下の対戦モードを追加する。シングルスでは対戦モードを組合せ評価に使わない。
 
 | モード | 概要 |
 | --- | --- |
@@ -171,7 +171,7 @@ replay では `generateMatchupUseCase` ではなく、復元した条件と採�
 - `matchupMode?: "standard" | "sameGenderPriority" | "mixedDoublesPriority"`
 - `participants[].gender?: "male" | "female"`
 
-API では後方互換のため、`matchupMode` 未指定を `standard` として扱う。`sameGenderPriority` / `mixedDoublesPriority` の場合は、全 participant に gender があることを必須にする。
+API では後方互換のため、`matchupMode` 未指定を `standard` として扱う。ダブルスで `sameGenderPriority` / `mixedDoublesPriority` の場合は、全 participant に gender があることを必須にする。シングルスでは `matchupMode` / `gender` を生成評価に使わないが、レスポンス条件には保持する。
 
 UI の `男性人数` / `女性人数` は API の直接項目にはせず、UI 側で participant 配列へ変換する。API 利用者は参加者ごとに gender を指定できるため、将来的な名前付き参加者にも対応しやすい。
 

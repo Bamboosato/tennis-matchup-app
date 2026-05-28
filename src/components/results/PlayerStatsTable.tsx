@@ -5,12 +5,14 @@ type PlayerStatsTableProps = {
   participants: Participant[];
   stats: PlayerStats[];
   score: ResultScore;
+  showParticipantGender?: boolean;
 };
 
 export function PlayerStatsTable({
   participants,
   stats,
   score,
+  showParticipantGender = true,
 }: PlayerStatsTableProps) {
   return (
     <div id="player-stats-panel" data-testid="player-stats-panel" className="mt-5 grid gap-5">
@@ -43,7 +45,9 @@ export function PlayerStatsTable({
               >
                 <div>
                   <p className="font-semibold">
-                    {participant ? formatParticipantName(participant) : stat.playerId}
+                    {participant
+                      ? formatParticipantName(participant, { showGender: showParticipantGender })
+                      : stat.playerId}
                   </p>
                 </div>
                 <div>

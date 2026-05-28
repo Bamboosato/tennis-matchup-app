@@ -524,7 +524,16 @@ POST /api/v1/matchups/generate
 POST /api/v1/matchups/replay
 ```
 
-### 11.2 対戦モード入力
+### 11.2 試合形式と対戦モード入力
+
+`generate` / `replay` の request body では、画面の試合形式と同じ値を `matchFormat` で指定できる。
+
+| 画面表示 | API値 | 意味 |
+| --- | --- | --- |
+| ダブルス | `doubles` | 1 コート 4 人、2 ペアで対戦 |
+| シングルス | `singles` | 1 コート 2 人、1 対 1 で対戦 |
+
+未指定時は後方互換のため `doubles` として扱う。
 
 `generate` / `replay` の request body では、画面の対戦モードと同じ値を `matchupMode` で指定できる。
 
@@ -536,7 +545,7 @@ POST /api/v1/matchups/replay
 
 未指定時は後方互換のため `standard` として扱う。
 
-`sameGenderPriority` / `mixedDoublesPriority` を指定する場合は、各 `participants[]` に `gender` が必要。
+`sameGenderPriority` / `mixedDoublesPriority` をダブルスで指定する場合は、各 `participants[]` に `gender` が必要。
 
 ```json
 {
@@ -548,7 +557,7 @@ POST /api/v1/matchups/replay
 }
 ```
 
-`gender` は `female` / `male` のいずれかとする。`standard` では `gender` なしでも利用できる。`standard` で `gender` を指定した場合は、レスポンスの `conditions.participants[]` に保持するが、組合せ評価には使わない。
+`gender` は `female` / `male` のいずれかとする。`standard` では `gender` なしでも利用できる。`standard` で `gender` を指定した場合は、レスポンスの `conditions.participants[]` に保持するが、組合せ評価には使わない。シングルスでは `matchupMode` / `gender` を組合せ評価に使わないが、指定された値はレスポンスに保持する。
 
 ### 11.3 認証
 
@@ -749,7 +758,7 @@ Firestore 接続、認証情報、読み書きで障害が起きた場合、Publ
 - アカウント追加、登録、更新、再発行、削除ができること。
 - Public API が APIキー、scope、rate limit を判定できること。
 - `generate` と `replay` が既存ロジックと同じ結果を返すこと。
-- Public API で画面と同じ対戦モードを指定でき、未指定時は通常扱いになること。
+- Public API で画面と同じ試合形式、対戦モードを指定でき、未指定時はダブルス・通常扱いになること。
 
 非機能観点:
 
@@ -766,7 +775,8 @@ Firestore 接続、認証情報、読み書きで障害が起きた場合、Publ
 - soft delete 後のアカウントが一覧から消え、API利用できないこと。
 - 監査ログに操作種別、対象、結果、requestId が残ること。
 - API利用ログに participantCount, courtCount, roundCount, seed は残り、参加者名は残らないこと。
-- 性別優先モードでは participant gender 不足を検証エラーにすること。
+- ダブルスの性別優先モードでは participant gender 不足を検証エラーにすること。
+- シングルスでは participant gender を生成評価に使わず、レスポンスに保持すること。
 
 UI観点:
 
@@ -790,8 +800,10 @@ UI観点:
 | N-007 | generate | 有効キーと scope で生成APIを呼べる |
 | N-008 | replay | 有効キーと scope で再現APIを呼べる |
 | N-009 | ログ参照 | 管理画面で監査ログを確認できる |
-| N-010 | Public API | `matchupMode` 未指定時に `standard` として生成できる |
-| N-011 | Public API | `sameGenderPriority` / `mixedDoublesPriority` を指定して生成・再現できる |
+| N-010 | Public API | `matchFormat` 未指定時に `doubles` として生成できる |
+| N-011 | Public API | `matchupMode` 未指定時に `standard` として生成できる |
+| N-012 | Public API | `sameGenderPriority` / `mixedDoublesPriority` を指定して生成・再現できる |
+| N-013 | Public API | `matchFormat=singles` で生成・再現できる |
 
 ### 16.3 異常系
 
@@ -806,7 +818,7 @@ UI観点:
 | E-007 | Public API | rate limit 超過で `429` を返す |
 | E-008 | Public API | Firestore障害時に `503` を返す |
 | E-009 | Public API | disabled/deleted アカウントを拒否する |
-| E-010 | Public API | 性別優先モードで participant gender 不足なら `422` を返す |
+| E-010 | Public API | ダブルスの性別優先モードで participant gender 不足なら `422` を返す |
 
 ### 16.4 境界値
 
@@ -817,6 +829,8 @@ UI観点:
 | B-003 | Public API | 参加人数31で `422` |
 | B-004 | Public API | 面数9で `422` |
 | B-005 | Public API | 回数21で `422` |
+| B-008 | Public API | シングルス参加人数2、面数1、回数1で成功 |
+| B-009 | Public API | シングルス参加人数1で `422` |
 | B-006 | rate limit | 10回/分までは成功 |
 | B-007 | rate limit | 11回目で `429` |
 

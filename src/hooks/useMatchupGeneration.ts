@@ -68,7 +68,7 @@ export function useMatchupGeneration() {
 
   const regenerate = useCallback(
     async (input: MatchConditionInput, seed: number) => {
-      incrementRerollCount();
+      incrementRerollCount(input.matchFormat ?? "doubles");
       return generate(input, seed);
     },
     [generate, incrementRerollCount],

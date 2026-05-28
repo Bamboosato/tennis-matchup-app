@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { generateMatchup } from "../domain/generateMatchup";
 import { MATCH_CONDITION_LIMITS } from "../model/limits";
-import type { MatchConditionInput, MatchupMode, MatchupResult } from "../model/types";
-import { matchupModeSchema } from "../model/schemas";
+import type { MatchConditionInput, MatchFormat, MatchupMode, MatchupResult } from "../model/types";
+import { matchFormatSchema, matchupModeSchema } from "../model/schemas";
 import { buildMatchConditions } from "./buildMatchConditions";
 import { APP_SHARE_URL } from "@/lib/constants/ui";
 
-const SHARE_QUERY_VERSION = "1.10";
+const SHARE_QUERY_VERSION = "1.20";
+const GENDER_SHARE_QUERY_VERSION = "1.10";
 const LEGACY_SHARE_QUERY_VERSION = "1.00";
 
 const legacySharedMatchQuerySchema = z.object({
@@ -16,7 +17,7 @@ const legacySharedMatchQuerySchema = z.object({
   participants: z.coerce
     .number({ message: "参加人数を読み込めませんでした" })
     .int("参加人数を読み込めませんでした")
-    .min(MATCH_CONDITION_LIMITS.participantCount.min, "参加人数を読み込めませんでした")
+    .min(MATCH_CONDITION_LIMITS.participantCount.singlesMin, "参加人数を読み込めませんでした")
     .max(MATCH_CONDITION_LIMITS.participantCount.max, "参加人数を読み込めませんでした"),
   courts: z.coerce
     .number({ message: "コート数を読み込めませんでした" })
@@ -36,7 +37,8 @@ const legacySharedMatchQuerySchema = z.object({
 
 const sharedMatchQuerySchema = legacySharedMatchQuerySchema
   .extend({
-    v: z.literal(SHARE_QUERY_VERSION),
+    v: z.union([z.literal(SHARE_QUERY_VERSION), z.literal(GENDER_SHARE_QUERY_VERSION)]),
+    format: matchFormatSchema.default("doubles"),
     mode: matchupModeSchema.default("standard"),
     female: z.coerce
       .number({ message: "女性人数を読み込めませんでした" })
@@ -50,7 +52,7 @@ const sharedMatchQuerySchema = legacySharedMatchQuerySchema
       .optional(),
   })
   .superRefine((value, ctx) => {
-    if (value.mode === "standard") {
+    if (value.format === "singles" || value.mode === "standard") {
       return;
     }
 
@@ -78,6 +80,7 @@ function formatParticipantLabel(index: number) {
 
 export function createAutoMatchConditionInput(params: {
   eventName?: string;
+  matchFormat?: MatchFormat;
   matchupMode?: MatchupMode;
   participantCount: number;
   femaleCount?: number;
@@ -85,9 +88,10 @@ export function createAutoMatchConditionInput(params: {
   courtCount: number;
   roundCount: number;
 }): MatchConditionInput {
+  const matchFormat = params.matchFormat ?? "doubles";
   const matchupMode = params.matchupMode ?? "standard";
 
-  if (matchupMode !== "standard") {
+  if (matchFormat === "doubles" && matchupMode !== "standard") {
     const femaleCount = params.femaleCount ?? 0;
     const maleCount = params.maleCount ?? 0;
 
@@ -98,6 +102,7 @@ export function createAutoMatchConditionInput(params: {
 
   return {
     eventName: params.eventName,
+    matchFormat,
     matchupMode,
     participantCount: params.participantCount,
     courtCount: params.courtCount,
@@ -108,7 +113,7 @@ export function createAutoMatchConditionInput(params: {
         name: formatParticipantLabel(index),
       };
 
-      return matchupMode === "standard"
+      return matchFormat === "singles" || matchupMode === "standard"
         ? participant
         : {
             ...participant,
@@ -133,21 +138,30 @@ function countResultGenders(result: MatchupResult) {
   );
 }
 
+function routePathForMatchFormat(matchFormat: MatchFormat): string {
+  return matchFormat === "singles" ? "/singles" : "/doubles";
+}
+
 export function buildSharedMatchUrl(
   result: MatchupResult,
   baseUrl = APP_SHARE_URL,
 ): string {
   const url = new URL(baseUrl);
+  url.pathname = routePathForMatchFormat(result.conditions.matchFormat);
 
   url.searchParams.set("shared", "1");
   url.searchParams.set("v", SHARE_QUERY_VERSION);
+  url.searchParams.set("format", result.conditions.matchFormat);
   url.searchParams.set("participants", String(result.conditions.participants.length));
   url.searchParams.set("courts", String(result.conditions.courtCount));
   url.searchParams.set("rounds", String(result.conditions.roundCount));
   url.searchParams.set("seed", String(result.seed));
   url.searchParams.set("mode", result.conditions.matchupMode);
 
-  if (result.conditions.matchupMode !== "standard") {
+  if (
+    result.conditions.matchFormat === "doubles" &&
+    result.conditions.matchupMode !== "standard"
+  ) {
     const genderCounts = countResultGenders(result);
 
     url.searchParams.set("female", String(genderCounts.female));
@@ -186,6 +200,7 @@ export function restoreSharedMatchupFromSearch(search: string): {
       : sharedMatchQuerySchema.parse({
           shared: params.get("shared"),
           v: params.get("v"),
+          format: params.get("format") ?? undefined,
           event: params.get("event") ?? undefined,
           participants: params.get("participants"),
           courts: params.get("courts"),
@@ -198,6 +213,7 @@ export function restoreSharedMatchupFromSearch(search: string): {
 
   const input = createAutoMatchConditionInput({
     eventName: parsed.event,
+    matchFormat: "format" in parsed ? parsed.format : "doubles",
     matchupMode: "mode" in parsed ? parsed.mode : "standard",
     participantCount: parsed.participants,
     femaleCount: "female" in parsed ? parsed.female : undefined,

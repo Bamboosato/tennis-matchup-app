@@ -1,14 +1,25 @@
 import type { CourtAssignment, Participant } from "@/features/matchmaking/model/types";
-import { formatPairParticipantNames } from "@/features/matchmaking/application/formatParticipantName";
+import {
+  formatPairParticipantNames,
+  formatSinglesMatchParticipantNames,
+} from "@/features/matchmaking/application/formatParticipantName";
 
 type CourtMatchCardProps = {
   court: CourtAssignment;
   participants: Participant[];
   compact?: boolean;
+  showParticipantGender?: boolean;
 };
 
-export function CourtMatchCard({ court, participants, compact = false }: CourtMatchCardProps) {
-  if (court.isUnused || !court.pairA || !court.pairB) {
+export function CourtMatchCard({
+  court,
+  participants,
+  compact = false,
+  showParticipantGender = true,
+}: CourtMatchCardProps) {
+  const formatOptions = { showGender: showParticipantGender };
+
+  if (court.isUnused || (!court.singlesMatch && (!court.pairA || !court.pairB))) {
     return (
       <div
         className={
@@ -27,6 +38,46 @@ export function CourtMatchCard({ court, participants, compact = false }: CourtMa
     );
   }
 
+  if (court.singlesMatch) {
+    const matchupLabel = formatSinglesMatchParticipantNames(
+      participants,
+      court.singlesMatch.player1Id,
+      court.singlesMatch.player2Id,
+      formatOptions,
+    );
+
+    if (compact) {
+      return (
+        <div className="rounded-[0.8rem] border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink)]">
+            Court {court.courtNumber}
+          </p>
+          <div className="mt-1 rounded-[0.65rem] bg-white px-2 py-2">
+            <p className="text-center text-[16px] leading-tight font-semibold tracking-[0.02em]">
+              {matchupLabel}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-[1.3rem] border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[0_8px_24px_rgba(53,40,19,0.04)]">
+        <p className="text-base font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]">
+          Court {court.courtNumber}
+        </p>
+        <div className="mt-4 rounded-2xl bg-white px-4 py-4">
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+            Match
+          </p>
+          <p className="mt-2 text-center text-lg font-semibold">
+            {matchupLabel}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (compact) {
     return (
       <div className="rounded-[0.8rem] border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5">
@@ -37,13 +88,13 @@ export function CourtMatchCard({ court, participants, compact = false }: CourtMa
           <div className="rounded-[0.65rem] bg-white px-2 py-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-muted)]">A</p>
             <p className="mt-0.5 text-[16px] leading-tight font-semibold tracking-[0.02em]">
-              {formatPairParticipantNames(participants, court.pairA.player1Id, court.pairA.player2Id)}
+              {formatPairParticipantNames(participants, court.pairA!.player1Id, court.pairA!.player2Id, formatOptions)}
             </p>
           </div>
           <div className="rounded-[0.65rem] bg-white px-2 py-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-muted)]">B</p>
             <p className="mt-0.5 text-[16px] leading-tight font-semibold tracking-[0.02em]">
-              {formatPairParticipantNames(participants, court.pairB.player1Id, court.pairB.player2Id)}
+              {formatPairParticipantNames(participants, court.pairB!.player1Id, court.pairB!.player2Id, formatOptions)}
             </p>
           </div>
         </div>
@@ -62,7 +113,7 @@ export function CourtMatchCard({ court, participants, compact = false }: CourtMa
             Pair A
           </p>
           <p className="mt-2 text-base font-semibold">
-            {formatPairParticipantNames(participants, court.pairA.player1Id, court.pairA.player2Id)}
+            {formatPairParticipantNames(participants, court.pairA!.player1Id, court.pairA!.player2Id, formatOptions)}
           </p>
         </div>
         <div className="rounded-2xl bg-white px-4 py-3">
@@ -70,7 +121,7 @@ export function CourtMatchCard({ court, participants, compact = false }: CourtMa
             Pair B
           </p>
           <p className="mt-2 text-base font-semibold">
-            {formatPairParticipantNames(participants, court.pairB.player1Id, court.pairB.player2Id)}
+            {formatPairParticipantNames(participants, court.pairB!.player1Id, court.pairB!.player2Id, formatOptions)}
           </p>
         </div>
       </div>

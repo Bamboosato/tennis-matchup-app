@@ -1,4 +1,9 @@
-import type { CourtAssignment, GenerationContext, ParticipantGender } from "../model/types";
+import type {
+  CourtAssignment,
+  GenerationContext,
+  ParticipantGender,
+  SinglesMatch,
+} from "../model/types";
 import { pickBestPairing } from "./pickBestPairing";
 import { ensureMatrixValue } from "../utils/matrix";
 import { seededValue } from "../utils/seededRandom";
@@ -32,6 +37,10 @@ function countGenders(playerIds: string[], ctx: GenerationContext) {
 }
 
 function groupGenderPenalty(playerIds: string[], ctx: GenerationContext): number {
+  if (ctx.conditions.matchFormat === "singles") {
+    return 0;
+  }
+
   if (ctx.conditions.matchupMode === "standard") {
     return 0;
   }
@@ -121,7 +130,52 @@ function pickBestCourtGroup(
   return group;
 }
 
+function singlesOpponentScore(
+  basePlayerId: string,
+  candidateId: string,
+  ctx: GenerationContext,
+): number {
+  const encounterPenalty =
+    ensureMatrixValue(ctx.encounterMatrix, basePlayerId, candidateId) * 12;
+  const opponentPenalty =
+    ensureMatrixValue(ctx.opponentMatrix, basePlayerId, candidateId) * 5;
+
+  return encounterPenalty + opponentPenalty;
+}
+
+function pickBestSinglesMatch(
+  basePlayerId: string,
+  remaining: string[],
+  ctx: GenerationContext,
+): SinglesMatch {
+  const opponentId = remaining
+    .filter((playerId) => playerId !== basePlayerId)
+    .sort((left, right) => {
+      const scoreDiff =
+        singlesOpponentScore(basePlayerId, left, ctx) -
+        singlesOpponentScore(basePlayerId, right, ctx);
+
+      if (scoreDiff !== 0) {
+        return scoreDiff;
+      }
+
+      return (
+        seededValue(ctx.seed, "singles", basePlayerId, left) -
+        seededValue(ctx.seed, "singles", basePlayerId, right)
+      );
+    })[0]!;
+
+  return {
+    player1Id: basePlayerId,
+    player2Id: opponentId,
+  };
+}
+
 function courtPlayerIds(court: ActiveCourtAssignment): string[] {
+  if (court.singlesMatch) {
+    return [court.singlesMatch.player1Id, court.singlesMatch.player2Id];
+  }
+
   if (!court.pairA || !court.pairB) {
     return [];
   }
@@ -159,6 +213,7 @@ function rebalanceCourtNumbers(
       courtNumber,
       pairA: null,
       pairB: null,
+      singlesMatch: null,
       isUnused: true,
     }));
   }
@@ -223,6 +278,7 @@ function rebalanceCourtNumbers(
     courtNumber: assignedCourtNumbers[index],
     pairA: court.pairA,
     pairB: court.pairB,
+    singlesMatch: court.singlesMatch ?? null,
     isUnused: false,
   }));
   const usedCourtNumberSet = new Set(assignedCourtNumbers);
@@ -232,6 +288,7 @@ function rebalanceCourtNumbers(
       courtNumber,
       pairA: null,
       pairB: null,
+      singlesMatch: null,
       isUnused: true,
     }));
 
@@ -249,6 +306,7 @@ function compactCourtNumbers(
     courtNumber: index + 1,
     pairA: court.pairA,
     pairB: court.pairB,
+    singlesMatch: court.singlesMatch ?? null,
     isUnused: false,
   }));
   const unusedAssignments = allCourtNumbers
@@ -257,6 +315,7 @@ function compactCourtNumbers(
       courtNumber,
       pairA: null,
       pairB: null,
+      singlesMatch: null,
       isUnused: true,
     }));
 
@@ -274,14 +333,39 @@ export function assignCourts(
   const remaining = [...activePlayerIds];
   const activeCourts: ActiveCourtAssignment[] = [];
 
-  while (remaining.length >= 4 && activeCourts.length < usableCourtCount) {
+  while (
+    remaining.length >= ctx.conditions.playersPerCourt &&
+    activeCourts.length < usableCourtCount
+  ) {
     const basePlayerId = pickBasePlayer(remaining, ctx);
+
+    if (ctx.conditions.matchFormat === "singles") {
+      const singlesMatch = pickBestSinglesMatch(basePlayerId, remaining, ctx);
+
+      activeCourts.push({
+        pairA: null,
+        pairB: null,
+        singlesMatch,
+      });
+
+      for (const playerId of [singlesMatch.player1Id, singlesMatch.player2Id]) {
+        const index = remaining.indexOf(playerId);
+
+        if (index >= 0) {
+          remaining.splice(index, 1);
+        }
+      }
+
+      continue;
+    }
+
     const group = pickBestCourtGroup(basePlayerId, remaining, ctx);
     const [pairA, pairB] = pickBestPairing(group, ctx);
 
     activeCourts.push({
       pairA,
       pairB,
+      singlesMatch: null,
     });
 
     for (const playerId of group) {

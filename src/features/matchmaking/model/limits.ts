@@ -1,6 +1,8 @@
 export const MATCH_CONDITION_LIMITS = {
   participantCount: {
     min: 4,
+    doublesMin: 4,
+    singlesMin: 2,
     max: 30,
   },
   courtCount: {

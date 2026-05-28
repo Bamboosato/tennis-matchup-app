@@ -5,31 +5,43 @@ const GENDER_MARKERS = {
   male: "M",
 } as const;
 
-export function formatParticipantName(participant: Participant): string {
-  if (!participant.gender) {
+type FormatParticipantOptions = {
+  showGender?: boolean;
+};
+
+export function formatParticipantName(
+  participant: Participant,
+  options: FormatParticipantOptions = {},
+): string {
+  if (!participant.gender || options.showGender === false) {
     return participant.name;
   }
 
   return `${participant.name}${GENDER_MARKERS[participant.gender]}`;
 }
 
-export function findParticipantName(participants: Participant[], playerId: string): string {
+export function findParticipantName(
+  participants: Participant[],
+  playerId: string,
+  options: FormatParticipantOptions = {},
+): string {
   const participant = participants.find((entry) => entry.id === playerId);
 
-  return participant ? formatParticipantName(participant) : playerId;
+  return participant ? formatParticipantName(participant, options) : playerId;
 }
 
 export function formatPairParticipantNames(
   participants: Participant[],
   player1Id: string,
   player2Id: string,
+  options: FormatParticipantOptions = {},
 ): string {
   const formattedPlayers = [player1Id, player2Id]
     .map((playerId, order) => {
       const participant = participants.find((entry) => entry.id === playerId);
 
       return {
-        label: participant ? formatParticipantName(participant) : playerId,
+        label: participant ? formatParticipantName(participant, options) : playerId,
         order,
         sortIndex: participant?.index ?? Number.MAX_SAFE_INTEGER,
       };
@@ -43,4 +55,31 @@ export function formatPairParticipantNames(
     });
 
   return formattedPlayers.map((player) => player.label).join(" / ");
+}
+
+export function formatSinglesMatchParticipantNames(
+  participants: Participant[],
+  player1Id: string,
+  player2Id: string,
+  options: FormatParticipantOptions = {},
+): string {
+  const formattedPlayers = [player1Id, player2Id]
+    .map((playerId, order) => {
+      const participant = participants.find((entry) => entry.id === playerId);
+
+      return {
+        label: participant ? formatParticipantName(participant, options) : playerId,
+        order,
+        sortIndex: participant?.index ?? Number.MAX_SAFE_INTEGER,
+      };
+    })
+    .toSorted((left, right) => {
+      if (left.sortIndex !== right.sortIndex) {
+        return left.sortIndex - right.sortIndex;
+      }
+
+      return left.order - right.order;
+    });
+
+  return formattedPlayers.map((player) => player.label).join(" vs ");
 }

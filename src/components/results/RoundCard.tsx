@@ -8,6 +8,7 @@ type RoundCardProps = {
   compact?: boolean;
   completed?: boolean;
   completionDisabled?: boolean;
+  showParticipantGender?: boolean;
   onCompletedChange?: (checked: boolean) => void;
 };
 
@@ -17,19 +18,20 @@ export function RoundCard({
   compact = false,
   completed = false,
   completionDisabled = false,
+  showParticipantGender = true,
   onCompletedChange,
 }: RoundCardProps) {
+  const cardClassName = compact
+    ? "rounded-[1rem] border border-[var(--color-line)] bg-white px-3 py-2 shadow-none print:break-inside-avoid"
+    : completed
+      ? "rounded-[1.8rem] border border-[#d4cfc4] bg-[repeating-linear-gradient(135deg,rgba(229,226,219,0.96),rgba(229,226,219,0.96)_12px,rgba(244,242,237,0.96)_12px,rgba(244,242,237,0.96)_24px)] p-5 shadow-[0_18px_50px_rgba(53,40,19,0.08)] sm:p-6 print:break-inside-avoid print:rounded-none print:border print:shadow-none"
+      : "rounded-[1.8rem] border border-white/70 bg-white/92 p-5 shadow-[0_18px_50px_rgba(53,40,19,0.1)] sm:p-6 print:break-inside-avoid print:rounded-none print:border print:shadow-none";
+
   return (
     <section
       data-testid={`round-card-${round.roundNumber}`}
       data-completed={completed}
-      className={
-        compact
-          ? "rounded-[1rem] border border-[var(--color-line)] bg-white px-3 py-2 shadow-none print:break-inside-avoid"
-          : completed
-            ? "rounded-[1.8rem] border border-[#d4cfc4] bg-[repeating-linear-gradient(135deg,rgba(229,226,219,0.96),rgba(229,226,219,0.96)_12px,rgba(244,242,237,0.96)_12px,rgba(244,242,237,0.96)_24px)] p-5 shadow-[0_18px_50px_rgba(53,40,19,0.08)] backdrop-blur sm:p-6 print:break-inside-avoid print:rounded-none print:border print:shadow-none"
-            : "rounded-[1.8rem] border border-white/70 bg-white/92 p-5 shadow-[0_18px_50px_rgba(53,40,19,0.1)] backdrop-blur sm:p-6 print:break-inside-avoid print:rounded-none print:border print:shadow-none"
-      }
+      className={`${cardClassName} scroll-mt-24`}
     >
       <div className={compact ? "mb-2 flex items-center justify-between gap-2" : "mb-4 flex items-center justify-between gap-3"}>
         <div className={compact ? undefined : "flex items-center gap-3"}>
@@ -46,8 +48,8 @@ export function RoundCard({
             <label
               className={
                 completionDisabled
-                  ? "inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white/60 px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] opacity-60"
-                  : "inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white/80 px-3 py-1.5 text-sm font-medium text-[var(--color-muted)]"
+                  ? "inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[var(--color-line)] bg-white/60 px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] opacity-60"
+                  : "inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[var(--color-line)] bg-white/80 px-3 py-1.5 text-sm font-medium text-[var(--color-muted)]"
               }
             >
               <input
@@ -66,7 +68,7 @@ export function RoundCard({
           {!compact && completed ? (
             <span
               data-testid={`round-complete-badge-${round.roundNumber}`}
-              className="rounded-full border border-[#bdd6c2] bg-[#eef7f0] px-3 py-1.5 text-sm font-semibold text-[#315d3b]"
+              className="hidden rounded-full border border-[#bdd6c2] bg-[#eef7f0] px-3 py-1.5 text-sm font-semibold text-[#315d3b] sm:inline-flex"
             >
               完了
             </span>
@@ -75,7 +77,7 @@ export function RoundCard({
             className={
               compact
                 ? "rounded-full bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-muted)]"
-                : "rounded-full bg-[var(--color-surface)] px-4 py-2 text-base text-[var(--color-muted)]"
+                : "whitespace-nowrap rounded-full bg-[var(--color-surface)] px-4 py-2 text-base text-[var(--color-muted)]"
             }
           >
             出場 {round.activePlayerIds.length} 人
@@ -104,6 +106,7 @@ export function RoundCard({
                 court={court}
                 participants={participants}
                 compact={compact}
+                showParticipantGender={showParticipantGender}
               />
             ))}
           </div>
@@ -112,6 +115,7 @@ export function RoundCard({
           restPlayerIds={round.restPlayerIds}
           participants={participants}
           compact={compact}
+          showParticipantGender={showParticipantGender}
         />
       </div>
     </section>

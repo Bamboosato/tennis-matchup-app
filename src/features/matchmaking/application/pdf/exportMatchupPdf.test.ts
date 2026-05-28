@@ -83,6 +83,7 @@ function result(): MatchupResult {
   return {
     conditions: {
       eventName: "週末テニス会",
+      matchFormat: "doubles",
       matchupMode: "standard",
       participants: participants(4),
       courtCount: 1,

@@ -90,6 +90,88 @@ test("uses the latest typed conditions without requiring blur before generation"
   await expect(page.getByTestId("round-card-1")).toContainText("Court 4");
 });
 
+test("generates singles without gender mode controls and restores a singles share URL", async ({
+  page,
+}) => {
+  await page.goto("/singles");
+
+  await expect(page.getByTestId("desktop-singles-tab")).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText("対戦モード")).toHaveCount(0);
+  await expect(page.getByTestId("female-count-input")).toHaveCount(0);
+  await expect(page.getByTestId("male-count-input")).toHaveCount(0);
+  await expect(page.getByTestId("participant-count-input")).toHaveValue("4");
+  await expect(page.getByTestId("summary-usable-courts")).toHaveText("2 面");
+  await expect(page.getByTestId("summary-active-players")).toHaveText("4 人");
+  await expect(page.getByTestId("summary-rest-players")).toHaveText("0 人");
+  await expect(page.getByTestId("auto-numbering-breakdown")).toContainText(
+    "シングルスでは性別マークを付けず",
+  );
+
+  await page.getByTestId("event-name-input").fill("E2Eシングルス会");
+  await page.getByTestId("round-count-input").fill("2");
+  await page.getByTestId("generate-button").click();
+
+  await expect(page.getByTestId("result-summary")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toContainText("vs");
+  await expect(page.getByTestId("round-card-1")).not.toContainText(/\d{2}[FM]/);
+  await page.getByTestId("round-complete-checkbox-1").check();
+  await expect(page.getByTestId("round-complete-checkbox-1")).toBeChecked();
+
+  await page.getByTestId("desktop-doubles-tab").click();
+  await expect(page).toHaveURL(/\/doubles$/);
+  await expect(page.getByTestId("result-summary")).toHaveCount(0);
+  await expect(page.getByText("対戦モード")).toBeVisible();
+  await expect(page.getByTestId("participant-count-input")).toHaveValue("8");
+  await page.getByTestId("event-name-input").fill("E2Eダブルス会");
+  await page.getByTestId("round-count-input").fill("1");
+  await page.getByTestId("generate-button").click();
+  await expect(page.getByTestId("result-summary")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toContainText("Court 1");
+  await page.getByTestId("round-complete-checkbox-1").check();
+  await expect(page.getByTestId("round-complete-checkbox-1")).toBeChecked();
+
+  await page.getByTestId("desktop-singles-tab").click();
+  await expect(page).toHaveURL(/\/singles$/);
+  await expect(page.getByTestId("event-name-input")).toHaveValue("E2Eシングルス会");
+  await expect(page.getByTestId("round-count-input")).toHaveValue("2");
+  await expect(page.getByTestId("result-summary")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toContainText("vs");
+  await expect(page.getByTestId("round-complete-checkbox-1")).toBeChecked();
+
+  await page.getByTestId("desktop-doubles-tab").click();
+  await expect(page).toHaveURL(/\/doubles$/);
+  await expect(page.getByTestId("event-name-input")).toHaveValue("E2Eダブルス会");
+  await expect(page.getByTestId("result-summary")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toContainText("Court 1");
+  await expect(page.getByTestId("round-complete-checkbox-1")).toBeChecked();
+
+  await page.getByTestId("desktop-singles-tab").click();
+  await expect(page).toHaveURL(/\/singles$/);
+
+  await page.getByTestId("continuation-panel-toggle").click();
+  await expect(page.getByTestId("continuation-add-female-count-input")).toHaveCount(0);
+  await expect(page.getByTestId("continuation-add-male-count-input")).toHaveCount(0);
+  await page.getByTestId("withdraw-participant-player-01").click();
+  await page.getByTestId("withdraw-participant-player-02").click();
+  await expect(page.getByTestId("continuation-next-eligible-count")).toContainText(
+    "変更後の参加人数：4人 → 2人",
+  );
+  await expect(page.getByTestId("continuation-disabled-reason")).toHaveCount(0);
+
+  await page.getByTestId("open-result-share-button").click();
+  await expect(page.getByTestId("result-share-dialog")).toBeVisible();
+  await expect(page.getByTestId("result-share-url")).toContainText("/singles?");
+  await expect(page.getByTestId("result-share-url")).toContainText("format=singles");
+  const shareUrl = await page.getByTestId("result-share-url").innerText();
+  await page.goto(shareUrl);
+
+  await expect(page).toHaveURL(/\/singles\?/);
+  await expect(page.getByTestId("result-summary")).toBeVisible();
+  await expect(page.getByText("共有された対戦表を表示中です。")).toBeVisible();
+  await expect(page.getByTestId("round-card-1")).toContainText("vs");
+  await expect(page.getByText("対戦モード")).toHaveCount(0);
+});
+
 test("confirms and applies court count adjustment before generation", async ({ page }) => {
   await page.goto("/");
 
@@ -252,6 +334,32 @@ test("completed round toggle can be switched and resets after regenerate", async
   await expect(page.getByTestId("round-complete-badge-1")).toHaveCount(0);
 });
 
+test("hides the completed badge on mobile to keep the round header compact", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await page.getByTestId("generate-button").click();
+  await expect(page.getByTestId("round-card-1")).toBeVisible();
+
+  await page.getByTestId("round-complete-checkbox-1").check();
+  await expect(page.getByTestId("round-card-1")).toHaveAttribute("data-completed", "true");
+  await expect(page.getByTestId("round-complete-badge-1")).toBeHidden();
+
+  const completeLabelBox = await page
+    .getByTestId("round-card-1")
+    .locator("label")
+    .first()
+    .boundingBox();
+  const activeCountBox = await page.getByText("出場 8 人").first().boundingBox();
+
+  expect(completeLabelBox).not.toBeNull();
+  expect(activeCountBox).not.toBeNull();
+  expect(completeLabelBox?.height).toBeLessThan(44);
+  expect(activeCountBox?.height).toBeLessThan(48);
+});
+
 test("continuation regenerate keeps completed rounds and disables result sharing", async ({ page }) => {
   await page.goto("/");
 
@@ -316,6 +424,15 @@ test("continuation regenerate keeps completed rounds and disables result sharing
   expect(continuationPanelBodyText.indexOf("追加人数")).toBeLessThan(
     continuationPanelBodyText.indexOf("退出者の番号"),
   );
+  await expect(page.getByTestId("continuation-disabled-reason")).toContainText(
+    "追加ラウンド・退出者・追加参加者のいずれかを指定すると、未実施ラウンドを再作成できます。",
+  );
+  expect(await page.getByTestId("continuation-change-summary").getAttribute("class")).toContain(
+    "border-[var(--color-line)]",
+  );
+  expect(await page.getByTestId("continuation-disabled-reason").getAttribute("class")).toContain(
+    "text-[var(--color-muted)]",
+  );
 
   const printButtonClass = await page.getByTestId("print-preview-button").getAttribute("class");
   const pdfButtonClass = await page.getByTestId("pdf-export-button").getAttribute("class");
@@ -328,6 +445,12 @@ test("continuation regenerate keeps completed rounds and disables result sharing
   await page.getByTestId("continuation-add-count-input").fill("23");
   await expect(page.getByTestId("continuation-disabled-reason")).toContainText(
     "参加者は総計30人以下にしてください。",
+  );
+  expect(await page.getByTestId("continuation-change-summary").getAttribute("class")).toContain(
+    "border-[#efb0a0]",
+  );
+  expect(await page.getByTestId("continuation-disabled-reason").getAttribute("class")).toContain(
+    "text-[#8f3822]",
   );
   await page.getByTestId("continuation-add-count-input").fill("1");
   await page.getByTestId("continuation-add-count-increment").click();
@@ -343,6 +466,13 @@ test("continuation regenerate keeps completed rounds and disables result sharing
   await expect(page.getByTestId("generation-complete-message")).toContainText(
     "作成/再作成が完了しました。",
   );
+  await expect
+    .poll(async () => {
+      const box = await page.getByTestId("round-card-3").boundingBox();
+
+      return box ? box.y >= 0 && box.y < 180 : false;
+    })
+    .toBe(true);
   await expect(page.getByTestId("open-result-share-button")).toBeDisabled();
   await expect(page.getByTestId("result-share-disabled-reason")).toHaveCount(0);
   await page.getByTestId("open-result-share-button").hover();
