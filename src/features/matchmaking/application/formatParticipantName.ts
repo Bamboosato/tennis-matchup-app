@@ -9,6 +9,8 @@ type FormatParticipantOptions = {
   showGender?: boolean;
 };
 
+const PAIR_PARTICIPANT_SEPARATOR = " & ";
+
 export function formatParticipantName(
   participant: Participant,
   options: FormatParticipantOptions = {},
@@ -54,7 +56,7 @@ export function formatPairParticipantNames(
       return left.order - right.order;
     });
 
-  return formattedPlayers.map((player) => player.label).join(" / ");
+  return formattedPlayers.map((player) => player.label).join(PAIR_PARTICIPANT_SEPARATOR);
 }
 
 export function formatSinglesMatchParticipantNames(

@@ -158,7 +158,7 @@ describe("exportMatchupPdf", () => {
       section: "body",
       column: { index: 1 },
       cell: {
-        raw: "01 / 02\n03 / 04",
+        raw: "01 & 02\n03 & 04",
         x: 100,
         y: 200,
         width: 160,
@@ -167,10 +167,10 @@ describe("exportMatchupPdf", () => {
     });
 
     const courtTextCalls = pdfMockState.textCalls.filter((call) =>
-      ["01 / 02", "vs", "03 / 04"].includes(call.text),
+      ["01 & 02", "vs", "03 & 04"].includes(call.text),
     );
 
-    expect(courtTextCalls.map((call) => call.text)).toEqual(["01 / 02", "vs", "03 / 04"]);
+    expect(courtTextCalls.map((call) => call.text)).toEqual(["01 & 02", "vs", "03 & 04"]);
     expect(courtTextCalls.map((call) => call.x)).toEqual([180, 180, 180]);
     expect(courtTextCalls.every((call) => call.y > 200 && call.y < 248)).toBe(true);
     expect(courtTextCalls[0]!.y).toBeLessThan(courtTextCalls[1]!.y);
