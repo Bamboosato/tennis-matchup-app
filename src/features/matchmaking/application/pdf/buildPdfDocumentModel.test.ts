@@ -134,7 +134,7 @@ describe("buildPdfDocumentModel", () => {
 
     expect(model.pages[0]?.rows[0]).toEqual({
       roundLabel: "1",
-      courtCells: ["01 / 02\n03 / 04", "未使用"],
+      courtCells: ["01 & 02\n03 & 04", "未使用"],
       restCell: "05, 06",
     });
   });
