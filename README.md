@@ -169,7 +169,7 @@ API入力上限は以下です。
 
 ### 前提
 
-- Node.js 20.9.0 以上（インストール済み Next.js 16.2.4 の要件）
+- Node.js 24.x（ローカル・GitHub Actions・Vercelを揃える。Firebase Admin SDK 14はNode.js 22以上が必要）
 - npm を利用
 
 ### インストール
@@ -210,6 +210,9 @@ npm run lint
 npm run test
 npm run test:watch
 npm run test:e2e
+npm run test:security
+npm run test:dependencies
+npm run audit:security
 ```
 
 ## テスト観点
@@ -261,7 +264,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-E2E は現在 Chromium 1プロジェクトで、ポート3001の開発サーバーを使用します。`reuseExistingServer: true` のため、既存サーバーを使う場合は対象コードが最新であることを確認してください。変更範囲とリスクに応じて対象ケースを選び、同一実機に対するスクリプトの並列実行は避けてください。例: `npm run test:e2e -- e2e/app.spec.ts --project=chromium --workers=1`。クロスブラウザー検証は現行設定には含まれません。
+E2E は現在 Chromium 1プロジェクトで、ポート3001を使用します。ローカルでは開発サーバーを起動し、既存サーバーがあれば再利用します。CIでは事前ビルド後の本番サーバーを使用し、既存サーバーの再利用を禁止して1 workerで実行します。変更範囲とリスクに応じて対象ケースを選び、同一実機に対するスクリプトの並列実行は避けてください。例: `npm run test:e2e -- e2e/app.spec.ts --project=chromium --workers=1`。クロスブラウザー検証は現行設定には含まれません。
 
 ### 3. 本番ビルド確認
 
@@ -277,6 +280,14 @@ npm run build
 4. 管理者ログイン後、アカウントを追加して APIキーを登録
 5. `POST /api/v1/matchups/generate` と `POST /api/v1/matchups/replay` を `Authorization: Bearer <API_KEY>` 付きで実行
 6. 管理画面で監査ログと API利用ログを確認
+
+## CIと依存監査
+
+GitHub Actionsはmain向けPRとmainへのpushで、クリーンインストール、lint、型チェック、単体テスト、監査ポリシーテスト、依存監査、uuid overrideの互換性確認、隔離Firestoreエミュレーター確認、本番ビルド、Chromium E2Eを実行します。
+
+`npm run audit:security` は全依存と本番依存を個別に監査します。本番依存はすべての指摘を失敗扱いとし、開発依存も明記した期限付き例外以外は失敗扱いです。通信エラーや不正な監査結果も成功にしません。監査JSONはCIのartifactとして保存します。
+
+修正版未公開のbraces由来の開発依存5項目だけを、`2026-11-05T00:00:00Z`までの例外にしています。新しいadvisory、版・依存経路の変更、本番依存化、期限切れではCIが失敗します。詳細と更新手順は[依存脆弱性対応・CI設計](docs/dependency-security-ci.md)を参照してください。
 
 ## ディレクトリ概要
 
@@ -307,6 +318,7 @@ docs/           API、生成モード、進行、共有、PWA の設計文書
 | [Service Worker設計](docs/pwa-service-worker-design.md) | 静的アセットキャッシュ |
 | [スプラッシュ設計](docs/pwa-splash-screen-design.md) | standalone起動時のロゴ表示 |
 | [2026-10-06 整合性確認](docs/implementation-audit-2026-10-06.md) | 確認対象、修正内容、公開済みとローカル変更の区別、検証範囲 |
+| [依存脆弱性対応・CI設計](docs/dependency-security-ci.md) | 依存更新、監査ポリシー、期限付き例外、CIの検証範囲 |
 
 ## デプロイ
 
