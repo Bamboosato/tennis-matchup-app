@@ -14,6 +14,10 @@
 /coverage
 /test-results/
 /.playwright-mcp/
+/playwright-report/
+/.security-audit/
+/firebase-debug.log
+/firestore-debug.log
 
 # next.js
 /.next/
