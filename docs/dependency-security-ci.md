@@ -92,4 +92,6 @@ Windows、Node.js 24.13.0、npm 11.6.2で検証した。
 
 Windowsの初回エミュレーター起動では、Javaの`UnixDomainSockets.connect0`が`Invalid argument`となり、SDK確認前に失敗した。SelectorProvider変更だけでは解消せず、検証プロセスの`JAVA_TOOL_OPTIONS`に`-Djdk.net.unixdomain.tmpdir=<存在しないローカルディレクトリ>`を指定してTCPへフォールバックさせると成功した。OSの設定やCIのLinux設定は変更していない。ログはGit管理対象外の`firestore-debug.log`に保存する。
 
+初回のLinux CIでは、WASM向けの任意依存`@emnapi/core`と`@emnapi/runtime`のlockfile不足を`npm ci`が検出した。Windowsのnpm 11.6.2で成功したインストールだけでは検出できなかったため、CIのnpm 11.19.0と同じ解決でlockfileを補完した。アプリで利用する既存パッケージの版は変えず、任意依存とlockfileのメタデータを修正する。
+
 CIのLinux環境での結果はPRのVerifyチェックを参照する。監査データは時間とともに変わるため、上の件数は確認日の記録であり、継続的な安全性の保証ではない。
