@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { APP_ICON_192_SRC, APP_ICON_512_SRC } from "@/lib/constants/assets";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -13,12 +14,12 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "ja",
     icons: [
       {
-        src: "/icons/icon-192.png",
+        src: APP_ICON_192_SRC,
         sizes: "192x192",
         type: "image/png",
       },
       {
-        src: "/icons/icon-512.png",
+        src: APP_ICON_512_SRC,
         sizes: "512x512",
         type: "image/png",
       },

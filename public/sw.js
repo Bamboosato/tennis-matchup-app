@@ -6,10 +6,13 @@ const STATIC_CACHE_NAME = `${STATIC_CACHE_PREFIX}${STATIC_CACHE_POLICY_VERSION}`
 
 const PRECACHE_URLS = [
   "/brand/logo-bamboosato.webp?brandv=bamboosato-v1",
+  "/icons/icon-192.png?iconv=transparent-v1",
+  "/icons/icon-512.png?iconv=transparent-v1",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];
 const CACHEABLE_PATH_PREFIXES = ["/_next/static/", "/brand/", "/icons/", "/fonts/"];
+const CACHE_FIRST_PATH_PREFIXES = ["/icons/"];
 
 function isCacheableStaticRequest(request) {
   if (request.method !== "GET") {
@@ -72,6 +75,20 @@ async function staleWhileRevalidate(request, event) {
   return networkResponsePromise;
 }
 
+async function cacheFirst(request) {
+  const cache = await caches.open(STATIC_CACHE_NAME);
+  const cachedResponse = await cache.match(request);
+
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  const networkResponse = await fetch(request);
+  await addStaticResponseToCache(request, networkResponse);
+
+  return networkResponse;
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -95,5 +112,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(staleWhileRevalidate(request, event));
+  const url = new URL(request.url);
+  const isCacheFirstRequest = CACHE_FIRST_PATH_PREFIXES.some((prefix) =>
+    url.pathname.startsWith(prefix),
+  );
+
+  event.respondWith(
+    isCacheFirstRequest
+      ? cacheFirst(request)
+      : staleWhileRevalidate(request, event),
+  );
 });

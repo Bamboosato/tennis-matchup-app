@@ -64,8 +64,8 @@ test("serves a valid web manifest", async ({ request }) => {
   expect(manifest.display).toBe("standalone");
   expect(manifest.icons).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ src: "/icons/icon-192.png" }),
-      expect.objectContaining({ src: "/icons/icon-512.png" }),
+      expect.objectContaining({ src: "/icons/icon-192.png?iconv=transparent-v1" }),
+      expect.objectContaining({ src: "/icons/icon-512.png?iconv=transparent-v1" }),
     ]),
   );
 });
@@ -81,8 +81,17 @@ test("serves the service worker with update-safe headers", async ({ request }) =
   expect(serviceWorker).toContain("/brand/");
   expect(serviceWorker).toContain("/icons/");
   expect(serviceWorker).toContain("/fonts/");
+  expect(serviceWorker).toContain('CACHE_FIRST_PATH_PREFIXES = ["/icons/"]');
+  expect(serviceWorker).toContain("/icons/icon-192.png?iconv=transparent-v1");
   expect(serviceWorker).toContain('STATIC_CACHE_POLICY_VERSION = "v1"');
   expect(serviceWorker).not.toContain("tennis-matchup-static-v1.2.1");
+});
+
+test("serves app icons with immutable cache headers", async ({ request }) => {
+  const response = await request.get("/icons/icon-192.png?iconv=transparent-v1");
+  expect(response.ok()).toBeTruthy();
+  expect(response.headers()["cache-control"]).toContain("max-age=31536000");
+  expect(response.headers()["cache-control"]).toContain("immutable");
 });
 
 test("caches static assets without caching API responses", async ({ page }) => {
