@@ -2,7 +2,7 @@
 
 ## 1. 位置づけ
 
-この設計書は、既存の `docs/api-design.md` を上書きせず、API公開に加えて管理画面、アカウント単位のAPIキー管理、Cloud Firestore 保存を含めた拡張方針をまとめる。
+この設計書は、実装済みの管理画面、アカウント単位のAPIキー管理、Cloud Firestore 保存の仕様をまとめる。公開APIの入出力契約は [api-design.md](api-design.md)、認証・運用仕様は本書を参照する。将来拡張は現行機能と区別して記載する。
 
 既存設計書:
 
@@ -40,11 +40,11 @@ API利用者は管理画面でアカウント単位に管理し、各アカウ�
 | scope UI | チェックボックス |
 | rate limit | 1分あたりN回 |
 | 初期rate limit | 10回/分 |
-| 有効/無効 | トグル |
+| 有効/無効 | チェックボックス |
 | データ保存 | Cloud Firestore |
-| Firebase project | 新規作成予定 |
+| Firebase project | `FIREBASE_PROJECT_ID` で接続先を指定 |
 | Firestore障害時 | `503 Service Unavailable` |
-| 管理画面総当たり対策 | 実装する |
+| 管理画面総当たり対策 | 同一IPで5回失敗後、15分ロック |
 | 管理画面セッション | 12時間 |
 | 監査ログ | 保存する |
 | API利用ログ | 参加者名を保存しない |
@@ -53,12 +53,14 @@ API利用者は管理画面でアカウント単位に管理し、各アカウ�
 | scope不足 | `403 Forbidden` |
 | APIレスポンスmeta | `requestId` を含める。`accountId` は含めない |
 
-## 3.1 Firebase 確定情報
+## 3.1 Firebase 運用記録
 
 | 項目 | 値 |
 | --- | --- |
 | Firebase Project ID | `tennis-matchup-app` |
 | Firestore location | Tokyo / `asia-northeast1` |
+
+上記は既存の運用記録であり、今回の文書照合ではクラウド上の設定を再確認していない。実際の接続先は環境変数に従う。
 
 ## 4. アカウント識別子
 
@@ -114,7 +116,8 @@ accountName の一意性は、Firestore transaction で `accountNameIndex` を�
           ├─ 管理者ログイン
           ├─ アカウント管理
           ├─ APIキー再発行
-          └─ 監査ログ参照
+          ├─ 監査ログ参照
+          └─ API利用ログ参照
 
 外部クライアント
   └─ Authorization: Bearer <API_KEY>
@@ -485,9 +488,9 @@ API利用ログを保存する。
 
 ## 10. 監査ログ参照
 
-### 10.1 管理画面タブ
+### 10.1 管理画面のログセクション
 
-`/admin` に監査ログタブを追加する。
+`/admin` に監査ログとAPI利用ログのセクションを表示する。タブ切替UIではなく、アカウント管理の下に並べて表示する。
 
 MVPで表示する項目:
 
@@ -502,18 +505,22 @@ requestId
 
 ### 10.2 検索・フィルタ
 
-初期実装:
+現行実装:
 
-- 直近200件を表示
-- 操作種別で絞り込み
-- アカウント名で絞り込み
-- requestId で検索
+- 監査ログ / API利用ログは、それぞれ作成日時の降順で直近200件を取得・表示する
+- 各セクションの `更新` ボタンで再取得する
+- 操作種別、アカウント名、requestIdによる検索・フィルタUIは未実装
 
 将来拡張:
 
+- 操作種別・アカウント名によるフィルタ、requestId検索
 - 日付範囲
 - CSV出力
 - API成功ログの集計表示
+
+### 10.3 API利用ログ
+
+日時、APIのendpoint、status、人数 / 面数 / 回数、seed、duration、requestIdを表示する。ログは成功した生成・再現とサーバー例外で記録されるが、認証拒否、JSON不正、入力検証エラーなど早期returnではAPI利用ログを書かない。認証失敗・scope不足・rate limit超過は監査ログをbest effortで記録するため、全リクエストの完全な履歴としては扱わない。
 
 ## 11. Public API
 
@@ -599,11 +606,13 @@ Authorization: Bearer <API_KEY>
 
 Firestore の fixed window counter で実装する。
 
-bucket例:
+bucket IDはwindow開始時刻のISO文字列を使う。
 
 ```txt
-apiRateLimits/{accountId}_{yyyyMMddHHmm}
+apiRateLimits/{accountId}_{bucketStartedAt.toISOString()}
 ```
+
+counterの更新はFirestore transactionで行い、複数インスタンスからの同時呼び出しでも回数を共有する。scopeまで通ったリクエストを入力検証前に加算するため、不正JSONや検証エラーも回数を消費する。window境界ではcounterが切り替わるfixed window方式であり、rolling windowではない。
 
 MVPでは少数アカウント前提のため Firestore で開始する。
 
@@ -659,9 +668,10 @@ PATCH /api/admin/accounts/{accountId}
 POST /api/admin/accounts/{accountId}/rotate-key
 DELETE /api/admin/accounts/{accountId}
 GET  /api/admin/audit-logs
+GET  /api/admin/api-request-logs
 ```
 
-Admin API は管理セッション cookie を必須とする。
+アカウント・ログ操作APIは管理セッションcookieを必須とする。`login` はセッション発行用であり、事前cookieを要求しない。`session` はログイン状態を返す。`logout` はcookieを削除する。アカウント設定ではscopeを1つ以上、rate limitは1〜1000回 / 60秒に制限する。
 
 ## 13. Firebase / Firestore 新規作成時の注意
 
@@ -784,7 +794,7 @@ UI観点:
 - 登録後は APIキーがマスク表示になること。
 - scope がチェックボックスで操作できること。
 - rate limit が数値入力で操作できること。
-- 有効/無効がトグルで操作できること。
+- 有効/無効がチェックボックスで操作できること。
 - 監査ログを管理画面から確認できること。
 
 ### 16.2 正常系
@@ -845,7 +855,7 @@ UI観点:
 | active -> deleted | 削除後は一覧非表示でAPI利用不可 |
 | generate -> replay | generate の seed を replay に渡すと同じ組合せになる |
 
-## 17. 実装順
+## 17. 当初の実装順（実装済み）
 
 1. この設計書を追加する。
 2. Firebase project / Firestore を新規作成する。
@@ -854,7 +864,7 @@ UI観点:
 5. 管理者ログインと session cookie を実装する。
 6. 管理画面のPC専用UIを実装する。
 7. アカウント追加、登録、更新、再発行、soft delete を実装する。
-8. 監査ログタブを実装する。
+8. 監査ログとAPI利用ログの表示セクションを実装する。
 9. Public API の APIキー認証を実装する。
 10. scope 判定と rate limit を実装する。
 11. `generate` / `replay` API を実装する。

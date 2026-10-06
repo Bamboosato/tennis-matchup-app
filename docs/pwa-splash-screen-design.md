@@ -35,7 +35,7 @@ PWA standalone 起動時に Bamboosato ブランドロゴを短時間表示し�
 
 スプラッシュ用ロゴは `public/brand/logo-bamboosato.webp` に配置する。
 
-Service Worker は `/brand/*` を静的アセットとして扱い、`/icons/*` や `/_next/static/*` と同じ runtime cache 対象にする。
+Service Worker は `/brand/*` を静的アセットとして扱い、ロゴをinstall時にprecacheする。runtime cacheはstale while revalidateとする。アイコンとはキャッシュ戦略を分け、詳細は [Service Worker設計](pwa-service-worker-design.md) を参照する。
 
 ## 5. テスト設計
 

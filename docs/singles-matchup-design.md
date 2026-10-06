@@ -1,5 +1,7 @@
 # シングルス対戦表対応 要件・設計書
 
+> `1.3.0` で実装済み。生成済みの形式別状態は画面切替中のみ保持し、再読み込みでは消える。共有と保存範囲の現行仕様は [共有・状態管理設計](sharing-and-state-design.md) を参照。
+
 ## 1. 目的
 
 現行のダブルス対戦表作成機能に加えて、シングルスの対戦表を作成できるようにする。
@@ -130,7 +132,7 @@ type MatchConditions = {
 - `対戦表(ダブルス)` は `/doubles` へ遷移する。
 - `対戦表(シングルス)` は `/singles` へ遷移する。
 - `/` 表示時はダブルスを active 扱いにする。
-- 既存の `近日公開予定` バッジは、シングルス実装時に削除する。
+- シングルスの `近日公開予定` バッジは削除済み。
 
 ### 7.2 条件フォーム
 
@@ -185,9 +187,9 @@ Court 1
 
 ## 8. 生成ロジック要件
 
-### 8.1 共通優先順位
+### 8.1 共通の生成品質
 
-シングルス、ダブルスともに、以下の優先順位を基本とする。
+シングルス、ダブルスともに、以下の生成品質の観点を基本とする。休憩者選定は前ラウンドの休憩有無を先に比較し、その後に休憩・出場回数を比較する。候補seedの採用は重み付き総合スコアで決めるため、以下を厳密な辞書順の制約としては扱わない。
 
 1. 休憩回数の公平性
 2. 連続休憩の回避
@@ -250,14 +252,14 @@ format=singles
 新共有 URL の例:
 
 ```txt
-/doubles?shared=1&v=...&format=doubles&participants=8&courts=2&rounds=4&seed=123
-/singles?shared=1&v=...&format=singles&participants=8&courts=2&rounds=4&seed=123
+/doubles?shared=1&v=1.20&format=doubles&participants=8&courts=2&rounds=4&seed=123&mode=standard
+/singles?shared=1&v=1.20&format=singles&participants=8&courts=2&rounds=4&seed=123&mode=standard
 ```
 
 互換方針:
 
 - `format` がない共有 URL は `doubles` として復元する。
-- 旧 version の共有 URL は `doubles` として復元する。
+- 旧 `1.00` は通常モードのダブルス、旧 `1.10` は `format` 未指定ならダブルスとして復元する。
 - `/singles` で `format=doubles` が渡された場合のように route と query が矛盾した共有 URL では、query の `format` を正として復元する。
 - 通常表示では route を正とする。
 
@@ -338,7 +340,7 @@ format=singles
 
 印刷プレビューは既存 `/print` の仕組みを維持し、渡された `MatchupResult.conditions.matchFormat` に応じて表示を切り替える。
 
-- ダブルスは現行表示を維持する。
+- ダブルスのペアは参加者index順に `01 & 02` と表示し、ペア同士を `vs` で区切る。画面・印刷・PDFで共通とする。
 - シングルスはコートごとに `01 vs 02` を表示する。
 - シングルスでは gender があっても `F` / `M` は表示しない。
 
@@ -476,7 +478,7 @@ UI 観点:
 | S-006 | continuation | シングルス結果で実施済みラウンドを固定し、未実施ラウンドだけ再作成できること |
 | S-007 | output | シングルス結果を生成後、印刷プレビューと PDF 出力が同じ対戦内容を表示すること |
 
-## 14. 実装ステップ案
+## 14. 当初の実装ステップ（実装済み）
 
 1. `MatchFormat` と `playersPerCourt` の型・schema・条件構築を追加する。
 2. `doubles` 未指定互換を維持したまま既存テストを通す。

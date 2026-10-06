@@ -12,8 +12,10 @@
 
 - `public/sw.js` による Service Worker の追加
 - production 環境での Service Worker 登録
-- `/brand/*`、`/icons/*`、`/fonts/*`、`/_next/static/*` の runtime cache
-- `/icons/icon-192.png`、`/icons/icon-512.png` の install 時 precache
+- `/brand/*`、`/fonts/*`、`/_next/static/*` の stale while revalidate runtime cache
+- `/icons/*` の cache first runtime cache
+- `/icons/icon-192.png?iconv=transparent-v1`、`/icons/icon-512.png?iconv=transparent-v1` の install 時 precache
+- 既存 manifest / 既存クライアント互換用の `/icons/icon-192.png`、`/icons/icon-512.png` の install 時 precache 維持
 - 画面表示用アイコンは deploy commit 連動の `assetv` を付けず、手動更新用の安定した `iconv` を使う
 - `/sw.js` の no-store ヘッダー設定
 - Service Worker とキャッシュ対象の E2E 検証
@@ -33,7 +35,7 @@
 | --- | --- | --- |
 | `/_next/static/*` | stale while revalidate | ファイル名がビルド単位で変わるため古いレスポンスを使っても安全性が高い |
 | `/brand/*` | stale while revalidate + スプラッシュロゴ precache | PWA standalone 起動時のブランドロゴ表示に必要になる |
-| `/icons/*` | stale while revalidate + 主要アイコン precache | ホーム画面追加と再訪問時に必要になる。通常のアプリ更新では URL を変えない |
+| `/icons/*` | cache first + 主要アイコン precache | ホーム画面追加、ヘッダー表示、再訪問時に必要になる。`iconv` を変えない通常のアプリ更新では再取得しない |
 | `/fonts/*` | stale while revalidate | 表示安定性を上げる |
 | HTML | キャッシュしない | 古い画面が残る事故を避ける |
 | `/api/*` | キャッシュしない | 生成結果、管理情報、認証状態を古くしない |
@@ -41,6 +43,8 @@
 Service Worker 自体は `/sw.js` として配信し、`Cache-Control: no-cache, no-store, must-revalidate` を付ける。
 
 画面左上のアプリアイコンと metadata の icon URL は `iconv=transparent-v1` のような手動バージョンを使う。`NEXT_PUBLIC_ASSET_VERSION` / Vercel commit SHA 由来の `assetv` は付けない。これにより、アプリ本体を更新してもアイコンの URL は変わらず、Service Worker とブラウザキャッシュを再利用できる。
+
+`/icons/*` は cache first とし、キャッシュに存在する場合はバックグラウンド再検証も行わない。アイコン画像そのものを差し替える場合は `src/lib/constants/assets.ts` の `APP_ICON_VERSION` と `public/sw.js` の precache URL を同時に更新する。
 
 ## 4. キャッシュバージョン
 
@@ -69,7 +73,7 @@ Service Worker の `activate` で `tennis-matchup-static-` から始まる古い
 データ観点:
 
 - 参加者、seed、組合せ結果、管理 API のレスポンスをキャッシュしないこと。
-- キャッシュキーはリクエスト URL 単位で扱い、`assetv` クエリ付きアイコンも別リソースとして扱えること。
+- キャッシュキーはリクエスト URL 単位で扱い、`iconv` クエリ付きアイコンも別リソースとして扱えること。
 
 UI 観点:
 
@@ -79,7 +83,8 @@ UI 観点:
 ### 5.2 正常系
 
 - `/sw.js` を取得し、JavaScript として配信されることを確認する。
-- Service Worker を登録し、`/icons/icon-192.png` を取得した後、静的キャッシュに保存されることを確認する。
+- Service Worker を登録し、`/icons/icon-192.png?iconv=transparent-v1` が install 時に静的キャッシュへ保存されることを確認する。
+- キャッシュ済みの `/icons/*` を再取得してもネットワーク再検証しないことを確認する。
 
 ### 5.3 異常系
 
@@ -98,7 +103,8 @@ UI 観点:
 | --- | --- | --- |
 | Service Worker 未登録 | production 画面を開く | `/sw.js` が登録される |
 | 新 Service Worker install | 主要アイコンを precache | 静的キャッシュが作成される |
-| fetch 発生 | 対象静的アセットを取得 | cache hit があれば返し、裏で更新する |
+| `/icons/*` fetch 発生 | 対象アイコンを取得 | cache hit があれば返し、ネットワーク再検証しない |
+| `/icons/*` 以外の静的 fetch 発生 | 対象静的アセットを取得 | cache hit があれば返し、裏で更新する |
 | activate | 古い静的キャッシュあり | 現行キャッシュ以外を削除する |
 
 ## 6. リスク

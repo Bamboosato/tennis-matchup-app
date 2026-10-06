@@ -1,5 +1,7 @@
 # tennis-matchup-app API 設計書
 
+> 現行実装: アカウント別APIキー、scope、rate limitを利用します。認証・管理・Firestoreの詳細は [API・管理画面設計](api-admin-design.md) を参照してください。途中再作成APIと組合せ結果の永続保存は未対応です。
+
 ## 1. 目的
 
 `tennis-matchup-app` の対戦組合せ決定ロジックを、別 Vercel アプリから利用できる公開 HTTPS API として提供する。
@@ -11,9 +13,9 @@
 - API 提供元は `tennis-matchup-app` の Vercel デプロイ環境とする。
 - 呼び出し元は別 Vercel アプリのサーバー側処理とする。
 - 通信方式は公開 HTTPS API とする。
-- 認証方式は固定 API キー方式とする。
+- 認証方式は管理画面で発行するアカウント別 API キー方式とする。
 - API キーは `Authorization: Bearer <API_KEY>` で送信する。
-- API キーは Vercel Environment Variables で管理し、ソースコードには含めない。
+- API 提供元は Firestore に API キーのhashと状態を保存する。呼び出し元は生キーをサーバー側環境変数などで管理し、ソースコードには含めない。
 - Next.js App Router の Route Handler として実装する。
 - 通常生成と seed 指定の再現は別 API として分離する。
 
@@ -21,7 +23,7 @@
 
 - ブラウザからの直接呼び出しを主経路にすること。
 - OAuth、JWT、ユーザー単位認証などの複雑な認可。
-- API 利用者ごとの個別レート制限。
+- 固定ラウンドや途中参加・退出履歴を含む途中再作成。
 - 旧バージョン API との互換保証。
 - 組合せ結果の永続保存。
 
@@ -54,21 +56,17 @@ Content-Type: application/json
 
 ### 5.3 認証
 
-すべての API は固定 API キーを必須とする。
+すべての API は管理画面で発行・登録した API キーを必須とする。
 
 ```http
 Authorization: Bearer <API_KEY>
 ```
 
-API 側は、Vercel Environment Variables に設定した API キーと一致するかを検証する。
+キー形式は `tm_live_<keyId>_<secret>`。API 側は `keyId` から Firestore のキー情報を取得し、受信キーの SHA-256 hash を timing-safe に照合した後、アカウントとキーの有効状態、必要な scope、アカウント単位の rate limit を確認する。draft、無効、削除済み、再発行前のキーは利用できない。
 
-想定環境変数:
+認証失敗は `401`、scope不足は `403`、rate limit超過は `429`、Firestoreなどの障害は `503` を返す。認証・scope・rate limit確認はbodyの解析・入力検証より前に行うため、認証済みの不正入力もrate limitの回数を消費する。
 
-```txt
-MATCHUP_API_KEY=<secret>
-```
-
-認証に失敗した場合は `401 Unauthorized` を返す。
+提供元は `MATCHUP_API_KEY` 環境変数を参照しない。必要な接続・管理認証設定は9.1節を参照。
 
 ### 5.4 CORS
 
@@ -81,7 +79,7 @@ MATCHUP_API_KEY=<secret>
 - `Access-Control-Allow-Methods`
 - `Access-Control-Allow-Headers`
 
-ただし、ブラウザに固定 API キーを置くと秘匿できないため、ブラウザ直呼びは推奨しない。
+ただし、ブラウザに API キーを置くと秘匿できないため、ブラウザ直呼びは推奨しない。
 
 ### 5.5 入力上限
 
@@ -114,7 +112,7 @@ API の安定性と予期しない負荷を避けるため、以下の上限を�
 - `name` は trim 後に空文字不可。
 - `gender` は `female` / `male` のいずれか。ダブルスで `matchupMode` が `sameGenderPriority` / `mixedDoublesPriority` の場合は必須。ダブルス `standard` とシングルスでは任意で、指定された場合はレスポンスの `conditions.participants[]` に保持する。
 - `participants.length` は `participantCount` と一致する必要がある。
-- `participants[].id` は同一リクエスト内で一意であることを推奨する。
+- `participants[].id` は同一リクエスト内で一意の値を渡す。現行schemaは重複や空白のみのIDを検出しないため、呼び出し元で保証する。
 
 ### 5.7 レスポンスの安定性
 
@@ -187,15 +185,17 @@ Authorization: Bearer <API_KEY>
 
 `seed` が未指定の場合、API 側で base seed を生成する。
 
-生成方式の候補:
+現行の生成方式:
 
 ```txt
-Date.now()
+Math.floor(Date.now() % 1_000_000_000)
 ```
 
 ただし、再現性が必要な場合は呼び出し元が `seed` を明示することを推奨する。API は採用された seed をレスポンスに含める。
 
 ### 6.7 Response 200
+
+以下は配列の一部を省略した構造例。実際には参加者、ラウンド、コート、statsを条件に応じて返し、成功・エラーの双方に `meta.requestId` を含める。
 
 ```json
 {
@@ -244,10 +244,11 @@ Date.now()
       "encounterPenalty": 10,
       "sameTeammatePenalty": 2,
       "sameOpponentPenalty": 3,
-      "totalScore": 15
+      "totalScore": 1050
     },
     "generatedAt": "2026-04-28T00:00:00.000Z"
-  }
+  },
+  "meta": { "requestId": "req_example" }
 }
 ```
 
@@ -334,6 +335,8 @@ Authorization: Bearer <API_KEY>
 
 ### 8.1 Error Response Format
 
+アプリが返す検証エラーは `meta.requestId` を含む。問い合わせやログ照合に利用する。
+
 ```json
 {
   "error": {
@@ -345,7 +348,8 @@ Authorization: Bearer <API_KEY>
         "message": "参加人数は30人以下にしてください"
       }
     ]
-  }
+  },
+  "meta": { "requestId": "req_example" }
 }
 ```
 
@@ -354,10 +358,14 @@ Authorization: Bearer <API_KEY>
 | Status | Code | Description |
 | ---: | --- | --- |
 | 400 | `INVALID_JSON` | JSON として解析できない |
-| 401 | `UNAUTHORIZED` | API キーがない、または一致しない |
-| 405 | `METHOD_NOT_ALLOWED` | 許可されていない HTTP メソッド |
+| 401 | `UNAUTHORIZED` | API キーがない、不正、またはキー / アカウントが利用不可 |
+| 403 | `FORBIDDEN` | アカウントに必要なscopeがない |
+| 405 | フレームワーク応答 | 許可されていない HTTP メソッド |
 | 422 | `VALIDATION_ERROR` | 入力値が仕様を満たさない |
-| 500 | `INTERNAL_SERVER_ERROR` | 想定外のサーバーエラー |
+| 429 | `RATE_LIMITED` | アカウント単位の回数上限を超過 |
+| 503 | `SERVICE_UNAVAILABLE` | 認証・rate limit・生成などでサーバー障害が発生 |
+
+`405` は Next.js の自動応答であり、アプリのJSONエラー形式や `meta.requestId` は保証しない。現行の両Route Handlerは、JSON / Zodの検証例外以外を `503` に変換する。
 
 ### 8.3 Validation Examples
 
@@ -374,7 +382,8 @@ Authorization: Bearer <API_KEY>
         "message": "参加人数は30人以下にしてください"
       }
     ]
-  }
+  },
+  "meta": { "requestId": "req_example" }
 }
 ```
 
@@ -391,7 +400,8 @@ Authorization: Bearer <API_KEY>
         "message": "参加者一覧の件数が参加人数と一致していません"
       }
     ]
-  }
+  },
+  "meta": { "requestId": "req_example" }
 }
 ```
 
@@ -408,7 +418,8 @@ seed 未指定で replay を呼んだ場合:
         "message": "再現にはseedが必要です"
       }
     ]
-  }
+  },
+  "meta": { "requestId": "req_example" }
 }
 ```
 
@@ -425,7 +436,8 @@ seed 未指定で replay を呼んだ場合:
         "message": "同性対決優先・混合対決優先では参加者の性別が必要です"
       }
     ]
-  }
+  },
+  "meta": { "requestId": "req_example" }
 }
 ```
 
@@ -436,10 +448,14 @@ seed 未指定で replay を呼んだ場合:
 設定する環境変数:
 
 ```txt
-MATCHUP_API_KEY=<secret>
+FIREBASE_PROJECT_ID
+FIREBASE_CLIENT_EMAIL
+FIREBASE_PRIVATE_KEY
+ADMIN_PASSWORD_HASH
+ADMIN_SESSION_SECRET
 ```
 
-Route Handler で `process.env.MATCHUP_API_KEY` を参照し、`Authorization` ヘッダーの Bearer token と照合する。
+Firebase Admin SDKでFirestoreへ接続し、APIキー・アカウント・rate limit・ログを管理する。管理画面でキーを発行・登録するため、提供元に固定の `MATCHUP_API_KEY` は設定しない。`FIREBASE_PRIVATE_KEY` の `\n` は接続時に改行へ復元する。
 
 ### 9.2 呼び出し元アプリ
 
@@ -449,6 +465,8 @@ Route Handler で `process.env.MATCHUP_API_KEY` を参照し、`Authorization` �
 MATCHUP_API_BASE_URL=https://tennis-matchup-app.bamboosato.com
 MATCHUP_API_KEY=<secret>
 ```
+
+この `MATCHUP_API_KEY` は呼び出し元で生キーを保持するための変数名の例で、提供元アプリの認証設定ではない。管理画面で登録済みのキーを設定する。
 
 呼び出し元アプリのサーバー側処理から API を呼び出す。
 
@@ -475,14 +493,16 @@ Production URL を呼ぶ構成では、このヘッダーは通常不要。
 
 ## 10. 実装方針
 
-### 10.1 ファイル構成案
+### 10.1 現行ファイル構成
 
 ```txt
 src/app/api/v1/matchups/generate/route.ts
 src/app/api/v1/matchups/replay/route.ts
 src/features/matchmaking/application/apiSchemas.ts
-src/features/matchmaking/application/apiErrors.ts
-src/features/matchmaking/application/apiAuth.ts
+src/features/admin/application/apiAuth.ts
+src/lib/server/api-response.ts
+src/lib/server/request.ts
+src/lib/server/firebase.ts
 ```
 
 ### 10.2 通常生成 API
@@ -576,6 +596,10 @@ UI 観点:
 | E-005 | replay | seed 未指定で `422` を返すこと |
 | E-006 | both | 許可外メソッドで `405` を返すこと |
 | E-007 | both | 性別優先モードで参加者性別不足の場合に `422` を返すこと |
+| E-008 | both | scope不足で `403` を返すこと |
+| E-009 | both | rate limit超過で `429` を返すこと |
+| E-010 | both | 無効化・削除・再発行前のキーで `401` を返すこと |
+| E-011 | both | Firestore障害で認証を通さず `503` を返すこと |
 
 ### 11.4 境界値
 
@@ -623,18 +647,17 @@ API キーと参加者名の全量ログ出力は避ける。
 
 ## 12. セキュリティ考慮
 
-- API キーはサーバー側環境変数にのみ保持する。
+- 呼び出し元の生APIキーはサーバー側で保持し、提供元のFirestoreにはhashのみ保存する。
 - API キーをブラウザへ露出しない。
 - API キーをログ出力しない。
 - 参加者名を含むため、リクエスト body の全量ログ出力は避ける。
-- `Authorization` ヘッダーの Bearer token は完全一致で検証する。
-- 将来的に複数クライアントへ提供する場合は、クライアント別 API キーやキー rotation を検討する。
+- `Authorization` ヘッダーの Bearer token はhashを照合し、状態・scope・rate limitも検証する。
+- アカウント別キーと管理画面での再発行は実装済み。再発行後、旧キーの猶予期間はない。
 
 ## 13. 今後の検討事項
 
-- API キー rotation の運用手順。
-- 複数呼び出し元アプリを許可する場合のキー管理。
-- レート制限の導入。
+- APIキーの有効期限と再発行時の猶予期間。
+- Firestore fixed window方式からRedisなどへの移行とログ保存期間。
 - CORS 対応の要否。
 - OpenAPI 形式の仕様書生成。
 - API バージョン更新時の互換方針。
